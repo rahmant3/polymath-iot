@@ -1,0 +1,24 @@
+[submodule "tensorflow"]
+	path = tensorflow
+	url = https://github.com/QuickLogic-Corp/tensorflow.git
+[submodule "qf_apps/quickfeather-initial-binaries"]
+	path = qf_apps/quickfeather-initial-binaries
+	url = https://github.com/QuickLogic-Corp/qf-initial-bins.git
+[submodule "s3-gateware"]
+	path = s3-gateware
+	url = https://github.com/QuickLogic-Corp/s3-gateware
+[submodule "qorc-testapps"]
+	path = qorc-testapps
+	url = https://github.com/QuickLogic-Corp/qorc-testapps
+[submodule "qorc-example-apps"]
+	path = qorc-example-apps
+	url = https://github.com/QuickLogic-Corp/qorc-example-apps.git
+[submodule "TinyFPGA-Programmer-Application"]
+	path = TinyFPGA-Programmer-Application
+	url = https://github.com/QuickLogic-Corp/TinyFPGA-Programmer-Application
+[submodule "quick-feather-dev-board"]
+	path = quick-feather-dev-board
+	url = https://github.com/QuickLogic-Corp/quick-feather-dev-board
+[submodule "quicklogic-fpga-toolchain"]
+	path = quicklogic-fpga-toolchain
+	url = https://github.com/QuickLogic-Corp/quicklogic-fpga-toolchain
