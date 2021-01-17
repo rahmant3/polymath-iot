@@ -26,8 +26,10 @@ This project requires the following tools:
 
 ## Build
 
-In order to build the project, issue:
+In order to build the project, issue the following from a windows command line.
+
    `wsl sh build.sh`
 
-In order to clean the project, issue:
+In order to clean the project, issue the following from a windows command line.
+
   `wsl sh build.sh clean`
