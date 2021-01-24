@@ -1,0 +1,14 @@
+{
+	"tasks": [
+		{
+			"label": "Build project",
+			"command": "sh",
+			"args": ["build.sh"],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}
