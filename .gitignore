@@ -50,3 +50,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+quickfeather/source/app/GCC_Project/output/app.bin
+quickfeather/source/app/GCC_Project/output/app.sym.txt
+quickfeather/source/app/GCC_Project/output/bin/app.bin
