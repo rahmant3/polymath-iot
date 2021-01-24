@@ -2,7 +2,7 @@
 
 pwd
 
-PATH="/usr/share/gcc-arm-none-eabi-10-2020-q4-major/bin/:$PATH"
+PATH="/usr/share/gcc-arm-none-eabi-9-2020-q2-update/bin/:$PATH"
 
 cd source/app/GCC_Project
 

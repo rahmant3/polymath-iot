@@ -12,7 +12,7 @@ This project requires the following tools:
 - WSL (Windows Subsystem for Linux) installed. Note that Linux is only used for building the project with Make -- otherwise we will just use regular Windows 10 (e.g. Python, pip, etc).
   - The GCC-ARM toolchain must be installed to WSL like below.
   
-    1. Download `"gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar"` tarball from: https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads
+    1. Download `"gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2"` tarball from: https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads
 
     2. Extract the tarball to /usr/share.
 
