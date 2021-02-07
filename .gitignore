@@ -1,8 +1,15 @@
 
 # ---------------- PROJECT-SPECIFIC IGNORES ------------
+# Output files
 quickfeather/source/app/GCC_Project/output/app.bin
 quickfeather/source/app/GCC_Project/output/app.sym.txt
 quickfeather/source/app/GCC_Project/output/bin/app.bin
+
+# Eclipse configurations
+quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.settings/org.eclipse.cdt.core.prefs
+quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.settings/language.settings.xml
+quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.project
+quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.cproject
 
 # ---------------- C/C++ IGNORES -----------------------
 
