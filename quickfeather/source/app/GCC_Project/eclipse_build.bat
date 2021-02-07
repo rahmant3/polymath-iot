@@ -3,4 +3,4 @@
 set WORKSPACE=%~1
 
 call del /S /Q "%WORKSPACE%\..\output\depend\*.d"
-make -C "%WORKSPACE%/../"
+make -C "%WORKSPACE%/../" %2 %3 %4
