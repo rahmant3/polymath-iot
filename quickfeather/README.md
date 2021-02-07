@@ -37,5 +37,9 @@ In order to clean the project, issue the following from a windows command line.
 ## Eclipse
 
 In order to set up the project to build and Debug using Eclipse, refer to the documentation in **source/app/GCC_Project/EclipseReadme.txt**. Note that:
-1. When debugging, the app.elf file is used (not a .bin file).
-2. When debugging an application, the bootstrap mode should not be enabled (i.e. the shunts for J1 and J7 should not be installed).
+
+1. When instructed to enter `make -C ${workspace_loc:/${ProjName}}/../` as the build command for Eclipse, you can instead enter `${workspace_loc:/${ProjName}}/../eclipse_build.bat ${workspace_loc:/${ProjName}}`. This was done to workaround build failures due to dependency files.
+
+2. When debugging, the app.elf file is used (not a .bin file).
+
+3. When debugging an application with JLink, the bootstrap mode should not be enabled (i.e. the shunts for J1 and J7 should not be installed).
