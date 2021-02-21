@@ -43,3 +43,10 @@ In order to set up the project to build and Debug using Eclipse, refer to the do
 2. When debugging, the app.elf file is used (not a .bin file).
 
 3. When debugging an application with JLink, the bootstrap mode should not be enabled (i.e. the shunts for J1 and J7 should not be installed).
+
+## Useful References
+
+* [Quickfeather Board User Guide](https://github.com/QuickLogic-Corp/quick-feather-dev-board/blob/master/doc/QuickFeather_UserGuide.pdf)
+* [Quickfeather Board Schematic](https://github.com/QuickLogic-Corp/quick-feather-dev-board/blob/master/doc/quickfeather-board.pdf)
+* [EOS S3 Datasheet](https://www.quicklogic.com/wp-content/uploads/2020/12/QL-EOS-S3-Ultra-Low-Power-multicore-MCU-Datasheet-2020.pdf)
+* [SensiML + Quickfeather](https://sensiml.com/documentation/firmware/quicklogic-quickfeather/quicklogic-quickfeather.html)
