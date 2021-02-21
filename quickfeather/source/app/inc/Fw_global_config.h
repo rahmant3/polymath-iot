@@ -62,7 +62,8 @@
 #define SIZEOF_DBGBUFFER    2048    // Number of characters in circular debug buffer
 
 /* Select the UART ID for Simple Streaming Interface */
-#define UART_ID_SSI             (UART_ID_HW)
+//#define UART_ID_SSI             (UART_ID_HW)
+#define UART_ID_SSI             (UART_ID_BUFFER)
 
 // Toggle GPIO whenever a datablock buffer is dispatched to the UART
 // Datablocks are dispatched every (SENSOR_SSSS_LATENCY) ms. Default is 20ms or 50Hz
@@ -159,6 +160,8 @@ extern int FPGA_FFE_LOADED;
 #define VALUE2STRING(value)    TOSTRING(value)
 #define TOSTRING(value)        #value
 #define SOURCE_LOCATION        __FILE__ ":" VALUE2STRING(__LINE__)
+
+#define UNUSED(a) (void)(a)    // Use to indicate this variable or value is unused.
 
 /********************/
 

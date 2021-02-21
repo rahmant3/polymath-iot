@@ -31,6 +31,8 @@
 #include "dbg_uart.h"
 //#include "qlsh_commands.h"
 
+#include "pm_training.h"
+
 #if FEATURE_CLI_DEBUG_INTERFACE
 
 #if 0 //DEBUG_H2D_PROTOCOL
@@ -194,8 +196,21 @@ const struct cli_cmd_entry qf_diagnostic[] =
     CLI_CMD_TERMINATE()
 };
 
+const struct cli_cmd_entry qf_training[] =
+{
+    CLI_CMD_WITH_ARG( "train_ultsnd", pm_training_set, PmTrainingUltrasound, "Set the ultrasound sensor as the active training data." ),
+    CLI_CMD_WITH_ARG( "train_air", pm_training_set, PmTrainingAir, "Set the air sensors as the active training data." ),
+    CLI_CMD_WITH_ARG( "train_accel", pm_training_set, PmTrainingAccel, "Set the accelerometer as the active training data." ),
+
+    CLI_CMD_SIMPLE( "start", pm_training_start, "Start data collection. Training will stop once there is no more room in the data buffer." ),
+    CLI_CMD_SIMPLE( "stop", pm_training_stop, "Stop data collection." ),
+    CLI_CMD_SIMPLE( "output", pm_training_output, "Print training data to the screen. " ),
+    CLI_CMD_TERMINATE()
+};
+
 const struct cli_cmd_entry my_main_menu[] = {
     CLI_CMD_SUBMENU( "diag", qf_diagnostic, "QuickFeather diagnostic commands" ),
+    CLI_CMD_SUBMENU( "training", qf_training, "Polymath training commands" ),
     CLI_CMD_TERMINATE()
 };
 
