@@ -27,6 +27,8 @@
 #include <stdint.h>
 #include "sec_debug.h"
 
+#define CONST_FREQ (1)
+
 #define ENABLE_VOICE_SOLUTION   1
 
 #define FEATURE_CLI_DEBUG_INTERFACE  1
@@ -63,7 +65,8 @@
 
 /* Select the UART ID for Simple Streaming Interface */
 //#define UART_ID_SSI             (UART_ID_HW)
-#define UART_ID_SSI             (UART_ID_BUFFER)
+//#define UART_ID_SSI             (UART_ID_BUFFER)
+#define UART_ID_SSI  (UART_ID_USBSERIAL)
 
 // Toggle GPIO whenever a datablock buffer is dispatched to the UART
 // Datablocks are dispatched every (SENSOR_SSSS_LATENCY) ms. Default is 20ms or 50Hz

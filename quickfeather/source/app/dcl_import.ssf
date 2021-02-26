@@ -1,6 +1,6 @@
 {
-    "name": "QuickFeather SimpleStream",
-    "uuid": "10b1db20-48a5-4442-a40e-fc530b456c89",
+    "name": "Polymath SimpleStream",
+    "uuid": "43702bd8-2070-4b67-b5b1-b1317ea14366",
     "collection_methods": [
         {
             "name": "live",
@@ -17,7 +17,7 @@
             "is_default": true,
             "serial_port_configuration": {
                 "com_port": null,
-                "baud": 460800,
+                "baud": 115200,
                 "stop_bits": 1,
                 "parity": 0,
                 "handshake": 0,

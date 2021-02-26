@@ -40,6 +40,8 @@ int         ssi_connect_string_len    = sizeof(ssi_connect_string) - 1;
 const char  ssi_disconnect_string[]   = "disconnect";
 int         ssi_disconnect_string_len = sizeof(ssi_disconnect_string) - 1;
 
+static bool test_mode_enabled = true;
+
 /* Control  task */
 void ssiTaskHandler(void* pParameter)
 {
@@ -54,34 +56,41 @@ void ssiTaskHandler(void* pParameter)
     json_len = strlen(json_string_sensor_config);
     while (1)
     {
-        // Send the JSON string
-        vTaskDelay(1000);
-        if (is_ssi_connected == false)
+        if (test_mode_enabled)
         {
-            uart_tx_raw_buf(UART_ID_SSI, json_string_sensor_config, json_len);
-        }
-        rx_avail = uart_rx_available(UART_ID_SSI);
-        if (rx_avail == ssi_connect_string_len)
-        {
-            uart_rx_raw_buf(UART_ID_SSI, ssi_rxbuf, ssi_connect_string_len);
-            if (strncmp(ssi_rxbuf, ssi_connect_string, ssi_connect_string_len) == 0)
-            {
-                is_ssi_connected = true;
-                sensor_ssss_startstop(1);
-            }
-        }
-        else if (rx_avail == ssi_disconnect_string_len)
-        {
-            uart_rx_raw_buf(UART_ID_SSI, ssi_rxbuf, ssi_disconnect_string_len);
-            if (strncmp(ssi_rxbuf, ssi_disconnect_string, ssi_disconnect_string_len) == 0)
-            {
-                is_ssi_connected = false;
-                sensor_ssss_startstop(0);
-            }
-        }
-        else
-        {
-            continue;
+			if (is_ssi_connected == false)
+			{
+				uart_tx_raw_buf(UART_ID_SSI, json_string_sensor_config, json_len);
+			}
+
+	        // Send the JSON string
+	        vTaskDelay(1000);
+
+			rx_avail = uart_rx_available(UART_ID_SSI);
+
+			if (rx_avail > 0)
+			{
+				uart_rx_raw_buf(UART_ID_SSI, ssi_rxbuf, rx_avail);
+
+				if (!is_ssi_connected)
+				{
+					if (strncmp(ssi_rxbuf, ssi_connect_string, rx_avail) == 0)
+					{
+						is_ssi_connected = true;
+						sensor_ssss_add();
+						sensor_ssss_configure();
+						sensor_ssss_startstop(1);
+					}
+				}
+				else
+				{
+					if (strncmp(ssi_rxbuf, ssi_disconnect_string, rx_avail) == 0)
+					{
+						is_ssi_connected = false;
+						sensor_ssss_startstop(0);
+					}
+				}
+			}
         }
     }
 }
