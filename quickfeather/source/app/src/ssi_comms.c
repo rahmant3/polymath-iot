@@ -27,6 +27,7 @@
 #include "dbg_uart.h"
 #include "sensor_ssss.h"
 #include "RtosTask.h"
+#include "pm_training.h"
 #include "ssi_comms.h"
 
 #define STACK_SIZE_TASK_SSI (256)
@@ -40,7 +41,7 @@ int         ssi_connect_string_len    = sizeof(ssi_connect_string) - 1;
 const char  ssi_disconnect_string[]   = "disconnect";
 int         ssi_disconnect_string_len = sizeof(ssi_disconnect_string) - 1;
 
-static bool test_mode_enabled = true;
+static bool test_mode_enabled = false;
 
 /* Control  task */
 void ssiTaskHandler(void* pParameter)
@@ -56,7 +57,18 @@ void ssiTaskHandler(void* pParameter)
     json_len = strlen(json_string_sensor_config);
     while (1)
     {
-        if (test_mode_enabled)
+    	if (!test_mode_enabled)
+    	{
+    		bool pm_enabled;
+    		PmTrainingModule_t module;
+    		pm_training_state(&pm_enabled, &module);
+
+    		if ((pm_enabled) && (module == PmTrainingAccel))
+    		{
+    			test_mode_enabled = true;
+    		}
+    	}
+    	else
         {
 			if (is_ssi_connected == false)
 			{
@@ -88,6 +100,10 @@ void ssiTaskHandler(void* pParameter)
 					{
 						is_ssi_connected = false;
 						sensor_ssss_startstop(0);
+
+						pm_training_stop(NULL);
+
+						test_mode_enabled = false;
 					}
 				}
 			}

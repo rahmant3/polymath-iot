@@ -57,13 +57,6 @@ void pm_training_start(const struct cli_cmd_entry *pEntry);
 void pm_training_stop(const struct cli_cmd_entry *pEntry);
 
 /**
- * @brief Output training data to the screen.
- * 
- * @param pEntry Not used.
- */
-void pm_training_output(const struct cli_cmd_entry *pEntry);
-
-/**
 * @brief Call to obtain the training status.
 * 
 * @param enabled The training state is loaded to this variable (true on enabled, false otherwise).

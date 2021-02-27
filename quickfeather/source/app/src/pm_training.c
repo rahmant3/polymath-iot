@@ -9,7 +9,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 // INCLUDES
 // --------------------------------------------------------------------------------------------------------------------
+#include <FreeRTOS.h>
+#include <task.h>
+
+#include <cli.h>
+
 #include "pm_training.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+// EXTERNS
+// --------------------------------------------------------------------------------------------------------------------
+extern xTaskHandle xHandleTestCli; // Task handle from cli_platform.c
 
 // --------------------------------------------------------------------------------------------------------------------
 // STRUCTURE AND STRUCTURE TYPEDEFS
@@ -62,27 +72,16 @@ void pm_training_start(const struct cli_cmd_entry *pEntry)
 {
     UNUSED(pEntry);
     g_trainingEnabled = true;
+
+    vTaskSuspend(xHandleTestCli); // Pause the CLI task to allow the SSI to run.
 }
 
 void pm_training_stop(const struct cli_cmd_entry *pEntry)
 {
     UNUSED(pEntry);
     g_trainingEnabled = false;
-}
 
-void pm_training_output(const struct cli_cmd_entry *pEntry)
-{
-    UNUSED(pEntry);
-
-    if (g_trainingEnabled)
-    {
-        CLI_printf("Training is still running. Stop the current training set.\n\n");
-    }
-    else
-    {
-        // TODO
-    }
-
+    vTaskResume(xHandleTestCli); // Resume the CLI task.
 }
 
 void pm_training_state(bool * enabled, PmTrainingModule_t * module)

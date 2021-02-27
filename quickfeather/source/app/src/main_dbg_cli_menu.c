@@ -202,9 +202,7 @@ const struct cli_cmd_entry qf_training[] =
     CLI_CMD_WITH_ARG( "train_air", pm_training_set, PmTrainingAir, "Set the air sensors as the active training data." ),
     CLI_CMD_WITH_ARG( "train_accel", pm_training_set, PmTrainingAccel, "Set the accelerometer as the active training data." ),
 
-    CLI_CMD_SIMPLE( "start", pm_training_start, "Start data collection. Training will stop once there is no more room in the data buffer." ),
-    CLI_CMD_SIMPLE( "stop", pm_training_stop, "Stop data collection." ),
-    CLI_CMD_SIMPLE( "output", pm_training_output, "Print training data to the screen. " ),
+    CLI_CMD_SIMPLE( "start", pm_training_start, "Start data collection. To stop training, the data capture lab must issue a disconnect command, or power must be cycled." ),
     CLI_CMD_TERMINATE()
 };
 
