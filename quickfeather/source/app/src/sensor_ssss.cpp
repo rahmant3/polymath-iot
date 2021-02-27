@@ -287,8 +287,8 @@ void sensor_ssss_block_processor(void)
   sensor_ssss_set_first_data_block();
 
   /* [TBD]: sensor configuration : should this be here or after scheduler starts? */
-  sensor_ssss_add();
-  sensor_ssss_configure();
+  //sensor_ssss_add();
+  //sensor_ssss_configure();
 #if 0
   printf("Sensor Name:                   %s\n", "SENSOR_SSSS_NAME");
   printf("Sensor Memory:                 %d\n", (int)SENSOR_SSSS_MEMSIZE_MAX);

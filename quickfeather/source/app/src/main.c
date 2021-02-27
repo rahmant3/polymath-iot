@@ -54,6 +54,8 @@ extern const struct cli_cmd_entry my_main_menu[];
 const char *SOFTWARE_VERSION_STR;
 
 
+
+
 /*
  * Global variable definition
  */
@@ -71,7 +73,7 @@ static void nvic_init(void);
 int main(void)
 {
 
-    SOFTWARE_VERSION_STR = "qorc-sdk/qf_apps/qf_ssi_app";
+    SOFTWARE_VERSION_STR = "polymath-iot-controller-master";
     
     qf_hardwareSetup();
     nvic_init();
@@ -83,7 +85,7 @@ int main(void)
     load_fpga(axFPGABitStream_length,axFPGABitStream);
     // Use 0x6141 as USB serial product ID (USB PID)
     HAL_usbserial_init2(false, true, 0x6141);        // Start USB serial not using interrupts
-    for (int i = 0; i != 4000000; i++) ;   // Give it time to enumerate
+    for (volatile int i = 0; i != 4000000; i++) ;   // Give it time to enumerate
 #endif
     dbg_str("\n\n");
     dbg_str( "##########################\n");
@@ -105,6 +107,10 @@ int main(void)
 
 #if (SENSOR_SSSS_LIVESTREAM_ENABLED == 1)
     StartSimpleStreamingInterfaceTask();
+#endif
+
+#if (FEATURE_USBSERIAL == 1)
+    CLI_start_task( my_main_menu );
 #endif
 
     /* Start the tasks and timer running. */
