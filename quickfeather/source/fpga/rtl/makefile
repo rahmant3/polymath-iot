@@ -3,7 +3,7 @@
 #
 
 IPMODULES = UART_16550
-MODULEDIRS = $(addprefix ../../../ip_modules/,${IPMODULES})
+MODULEDIRS = $(addprefix ../../qorc-sdk/s3-gateware/ip_modules/,${IPMODULES})
 RTL_SRCS:=$(wildcard *.v) $(wildcard ${MODULEDIRS}/rtl/*.v)
 # RTL_SRCS:= $(wildcard ../*.v) $(wildcard *.v)
 filters=

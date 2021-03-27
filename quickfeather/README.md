@@ -18,25 +18,43 @@ This project requires the following tools:
 
         `sudo tar xvjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 -C /usr/share/`
 
+  - (Optional) To build the FPGA logic, the Quicklogic FPGA toolchain must be installed to WSL like below.
+
+    1. Download `"Symbiflow_v1.3.1.gz.run"` to the `source` directory from: https://github.com/QuickLogic-Corp/quicklogic-fpga-toolchain/releases/tag/v1.3.1
+
+    2. From the `source` directory, issue the following commands.
+
+       `export INSTALL_DIR="$PWD/source/qorc-sdk/quicklogic-fpga-toolchain/install"`
+        `bash Symbiflow_v1.3.1.gz.run`
+
 - Python 3.6 or higher is need to reprogram the application (install a Windows version). 
     - TinyFPGA must be installed to the system. See the instructions here: https://github.com/QuickLogic-Corp/TinyFPGA-Programmer-Application
 
 - Visual Studio Code (VSCode) is used as the IDE: https://code.visualstudio.com/
   - After installing VSCode, make sure to install the "C/C++" Extension from Microsoft.
 
+
 ## Build (Command Line)
+
+### Application
 
 In order to build the project, issue the following from a windows command line.
 
-   `wsl sh build.sh`
+  `wsl bash build_app.sh`
 
 In order to clean the project, issue the following from a windows command line.
 
-  `wsl sh build.sh clean`
+  `wsl bash build_app.sh clean`
+
+### FPGA Logic
+
+(Optional) In order to build the FPGA logic, issue the following from a windows command line.
+
+  `wsl bash build_fpga.sh`
 
 ## Eclipse
 
-In order to set up the project to build and Debug using Eclipse, refer to the documentation in **source/app/GCC_Project/EclipseReadme.txt**. Note that:
+In order to set up the application to build and Debug using Eclipse, refer to the documentation in **source/app/GCC_Project/EclipseReadme.txt**. Note that:
 
 1. When instructed to enter `make -C ${workspace_loc:/${ProjName}}/../` as the build command for Eclipse, you can instead enter `${workspace_loc:/${ProjName}}/../eclipse_build.bat ${workspace_loc:/${ProjName}}`. This was done to workaround build failures due to dependency files.
 

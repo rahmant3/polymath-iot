@@ -2,7 +2,7 @@
 # Symbiflow options for QORK SDK
 #
 export RTL_TOP_MODULE=helloworldfpga
-export GATEWARE_DIR=$(PROJ_ROOT)$(DIR_SEP)s3-gateware$(DIR_SEP)projects$(DIR_SEP)S3_FPGA_2xUART
+export GATEWARE_DIR=$(APP_DIR)$(DIR_SEP)..$(DIR_SEP)..$(DIR_SEP)fpga
 
 #
 # GCC Configuration options for QORC SDK
