@@ -38,7 +38,7 @@ export OPT_FLAGS=-fmerge-constants -fomit-frame-pointer -fcrossjumping -fexpensi
 export LIBCMSIS_GCC_DIR=$(PROJ_ROOT)$(DIR_SEP)Libraries$(DIR_SEP)CMSIS$(DIR_SEP)lib$(DIR_SEP)GCC
 
 export INCLUDE_DIRS=-I"$(PROJ_DIR)" \
-                 -I"$(PROJ_ROOT)/qf_apps/$(PROJ_NAME)/inc" \
+                 -I"$(APP_DIR)/inc" \
                  -I"$(PROJ_ROOT)/s3-gateware/" \
                  -I"${GATEWARE_DIR}/" \
                  -I"$(PROJ_ROOT)/freertos_gateware/inc" \
@@ -66,7 +66,7 @@ export CFLAGS= $(MACROS) \
 
 export LD_FLAGS_1= -mcpu=cortex-m4 -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
             ${DASH_O} $(OPT_FLAGS) -fmessage-length=0 -fsigned-char -ffunction-sections -fdata-sections  \
-            ${DASH_G} -T "$(PROJ_DIR)/quickfeather.ld" -Xlinker --gc-sections -Wall -Werror \
+            ${DASH_G} -T "$(PROJ_DIR)/app.ld" -Xlinker --gc-sections -Wall -Werror \
 	-Wl,--fatal-warnings -Wl,-Map,"$(OUTPUT_PATH)/$(OUTPUT_FILE).map" \
             --specs=nano.specs --specs=nosys.specs -Wl,--no-wchar-size-warning \
             -o "$(OUTPUT_PATH)/$(OUTPUT_FILE).elf" -lm\
