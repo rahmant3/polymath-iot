@@ -60,6 +60,28 @@ const char *SOFTWARE_VERSION_STR;
 extern void qf_hardwareSetup();
 static void nvic_init(void);
 
+static void uartFpgaTestTask(void * params)
+{
+    bool flit = true;
+    const char * header = "Hello -- this is a UART FPGA\n";
+
+    uart_tx_buf(UART_ID_FPGA, header, strlen(header));
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        int numBytes = uart_rx_available(UART_ID_FPGA);
+        while (numBytes > 0)
+        {
+            uart_tx(UART_ID_FPGA, uart_rx(UART_ID_FPGA));
+            numBytes--;
+        }
+        
+        flit = !flit;
+        HAL_GPIO_Write(5, flit);
+    }
+}
+
 int main(void)
 {
 
@@ -130,6 +152,11 @@ int main(void)
 
     CLI_start_task( my_main_menu );
         
+    if (pdPASS == xTaskCreate(uartFpgaTestTask, "FPGA Task", 1024, NULL, (configMAX_PRIORITIES - 1), NULL))
+    {
+        HAL_GPIO_Write(5, true);
+    }
+    
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
     dbg_str("\n");

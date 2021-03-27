@@ -233,9 +233,9 @@ PadConfig pincfg_table[] =
       .ucSpeed = PAD_SLEW_RATE_SLOW,
       .ucSmtTrg = PAD_SMT_TRIG_DIS,
     },
-    { // Pad 3 -- FPGA UART Rx
-      .ucPin = PAD_3,
-      .ucFunc = PAD3_FUNC_SEL_FBIO_3,
+    { // Pad 13 -- FPGA UART Rx
+      .ucPin = PAD_13,
+      .ucFunc = PAD13_FUNC_SEL_FBIO_13,
       .ucCtrl = PAD_CTRL_SRC_FPGA,
       .ucMode = PAD_MODE_OUTPUT_EN,
       .ucPull = PAD_NOPULL,
