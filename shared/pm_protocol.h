@@ -6,133 +6,149 @@
 // - Github: https://github.com/rahmant3/polymath-iot
 //
 // Description:
-//   This file defines the communication protocol between the master and slave modules on the polymath-iot module.
+//   This file defines the core interface used to implement the polymath protocol. Example use:
 //
-//   All communication between the master and slave module follow this structure:
-//   - The master sends a message of type pmRequest_t, where the first byte contains the command code (see 
-//     pmCommandCodes_t), and the next 7 bytes contain parameters. To simplify the protocol, the command will 
-//     always contain 7 bytes of parameters, even if it is not used.
-//
-//   - The slave responds with a message of type pmResponse_t, where the first byte contains the response code (see
-//     pmReturnCodes_t), and the next bytes are variable length, depending on the command code that was sent by the
-//     master.
-//
-// TODO: Once this basic protocol is working, it should be improved to be more data efficient (i.e. not requiring one
-//       SPI transaction to obtain 1 sample from a sensor).
+/*
+  // Define driver functions
+  const pmProtocolDriver_t uart0Driver = 
+  {
+    .tx = function name,
+    .rx = function name
+  };
+  // Declare RAM for the context.
+  pmProtocolContext_t uart0Context;
+
+  // Later...
+  if (PM_PROTOCOL_SUCCESS == pmProtocolInit(&uart0Driver, &uart0Context))
+  {
+    ...
+  }
+
+  */
 // --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------
 // INCLUDES
 // --------------------------------------------------------------------------------------------------------------------
-#include <stdint.h>
+#include "pm_protocol_defs.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // DEFINES
 // --------------------------------------------------------------------------------------------------------------------
+#define PM_PROTOCOL_SUCCESS 0x00 //!< Function return code on success.
+#define PM_PROTOCOL_FAILURE 0x01 //!< Function return code on failure.
 
-// Protocol identifier (32-bit number). This should never change for this protocol.
-#define PM_PROTOCOL_IDENTIFIER 0x05050505
+#define PM_PROTOCOL_CHECKSUM_ERROR 0x02  //!< A packet read in progress failed due to a checksum error.
+#define PM_PROTOCOL_RX_TIMEOUT     0x03  //!< A packet read in progress failed due to a timeout.
+#define PM_PROTOCOL_TX_IN_PROGRESS 0x04  //!< A packet send failed due to another transmit in progress.
 
-// Compatibility number. Increment this by one each time the protocol changes and the master and slave are not 
-// compatible.
-#define PM_PROTOCOL_COMPATIBILITY_VERSION (1u) 
+#define PM_MAX_PAYLOAD_BYTES 64
 
-// The maximum number of sensors assumed to be attached to the slave.
-#define PM_MAX_SENSORS_PER_CLUSTER (8u)
-
-// --------------------------------------------------------------------------------------------------------------------
-// ENUMS AND ENUM TYPEDEFS
-// --------------------------------------------------------------------------------------------------------------------
-typedef enum pmCommandCodes_e
-{
-  // No parameters are included in this request. Used by the master to determine if the slave is compatible with
-  // the master. The slave shall return with a structure of type pmCmdProtocolInfo_t.
-  PM_CMD_PROTOCOL_INFO,
-
-  // No parameters are included in this request. Used by the master to determine how many sensors are on the
-  // sensor cluster. The slave shall return with a structure of type pmCmdNumSensors_t, containing the number of
-  // sensors attached (up to PM_MAX_SENSORS_PER_CLUSTER).
-  PM_CMD_NUM_SENSORS,
-
-  // No parameters are included in this request. Used by the master to determine the identifiers for each sensor on 
-  // the cluster. The slave shall return with a structure of type pmCmdGetSensors_t, containing up to 
-  // PM_MAX_SENSORS_PER_CLUSTER identifiers.
-  PM_CMD_GET_SENSORS,
-
-  // Byte 0-3 contains the ID of the sensor to read (LSB). Used by the master to get the sample rate of a sensor. The
-  // slave shall return with a structure of type pmCmdGetSampleRate_t, containing a 16-bit sample rate in Hz (LSB).
-  PM_CMD_GET_SAMPLE_RATE,
-
-  // Byte 0-3 contains the ID of the sensor to read (LSB). Used by the master to obtain a reading from a sensor. The
-  // slave shall return with a structure of type pmCmdGetSample_t, containing a 16-bit sample (LSB).
-  PM_CMD_GET_SAMPLE
-} pmCommandCodes_t;
-
-typedef enum pmReturnCodes_e
-{
-  // Returned by the slave to indicate successful operation.
-  PM_RET_SUCCESS,
-
-  // Returned by the slave to indicate failed operation. No additional information available.
-  PM_RET_FAILURE
-} pmReturnCodes_t;
-
+#define PM_NUM_OVERHEAD_BYTES 0x03
+#define MAX_TX_BYTES         (PM_MAX_PAYLOAD_BYTES + PM_NUM_OVERHEAD_BYTES)
+#define MAX_RX_BYTES         (PM_MAX_PAYLOAD_BYTES + PM_NUM_OVERHEAD_BYTES)
 
 // --------------------------------------------------------------------------------------------------------------------
-// STRUCTURES AND STRUCTURE TYPEDEFS
+// TYPEDEFS
 // --------------------------------------------------------------------------------------------------------------------
 
-// Command structure sent by the master, received by the slave.
-typedef struct pmRequest_s
-{
-  uint8_t command;
-  uint8_t params[3];
-} pmRequest_t;
+/**
+* @brief Driver function defined by the user, to transmit UART bytes.
+* 
+* @param data The data bytes to send.
+* @param numBytes The number of bytes to send.
+* @return int The number of bytes sent.
+*/
+typedef int (*pmProtocolUartTxFcnPtr) (uint8_t * data, uint8_t numBytes);
 
-// No params is included in this request. Is is assumed each uint32_t is LSB.
-typedef struct pmCmdProtocolInfo_s
-{
-  uint32_t protocolIdentifier;
-  uint32_t protocolCompatibility;
-} pmCmdProtocolInfo_t;
-
-// No params is included in this request. Is is assumed each uint32_t is LSB.
-typedef struct pmCmdNumSensors_s
-{
-  uint32_t numSensors;
-} pmCmdNumSensors_t;
-
-// No params is included in this request. Is is assumed each uint32_t is LSB.
-typedef struct pmCmdGetSensors_s
-{
-  uint32_t sensors[PM_MAX_SENSORS_PER_CLUSTER];
-} pmCmdGetSensors_t;
-
-// Byte 0-3 contains the ID of the sensor to read (LSB).
-typedef struct pmCmdGetSample_s
-{
-  uint16_t sample;
-} pmCmdGetSample_t;
-
-// Byte 0-3 contains the ID of the sensor to read (LSB).
-typedef struct pmCmdGetSampleRate_s
-{
-  uint16_t sampleRate_Hz;
-} pmCmdGetSampleRate_t;
+/**
+* @brief Driver function defined by the user, to receive UART bytes.
+* 
+* @param buffer The data buffer to load with the read bytes.
+* @param numBytes Size of the data buffer.
+* @return int The number of bytes loaded to the buffer.
+*/
+typedef int (*pmProtocolUartRxFcnPtr) (uint8_t * buffer, uint8_t numBytes);
 
 
-// Response structure sent by the slave in response to a command, received by the master.
-typedef struct pmResponse_s
+struct pmProtocolDriver_s; // Forward declare
+/**
+* @brief Private context variables. The user must declare a structure in static RAM for this module to use. The module
+*        takes care of initializing the RAM.
+* 
+*/
+typedef struct pmProtocolContext_s
 {
-  uint8_t returnCode;
-  union
-  {
-    pmCmdProtocolInfo_t protocolInfo;
-    pmCmdNumSensors_t numSensors;
-    pmCmdGetSensors_t getSensors;
-    pmCmdGetSample_t getSample;
-    pmCmdGetSampleRate_t getRate;
-  };
-} pmResponse_t;
+    const struct pmProtocolDriver_s * driver;
+
+    bool txInProgress;
+    uint8_t txBuffer[MAX_TX_BYTES];
+
+    uint8_t rxState;
+    uint8_t rxLen;
+    uint8_t rxBytes;
+    uint32_t rxStartTicks;
+    uint8_t rxBuffer[MAX_RX_BYTES];
+} pmProtocolContext_t;
+
+/**
+* @brief Parameters that allow this module to interact with the lower level hardware.
+* 
+*/
+typedef struct pmProtocolDriver_s
+{
+  pmProtocolUartTxFcnPtr tx; //!< Function used for transmitting data over UART.
+  pmProtocolUartRxFcnPtr rx; //!< Function used for receiving data over UART.
+} pmProtocolDriver_t;
+
+
+typedef struct pmProtocolRawPacket_s
+{
+  uint8_t bytes[PM_MAX_PAYLOAD_BYTES]; // The raw bytes to send.
+  uint8_t numBytes;  // The number of bytes in this->bytes.
+} pmProtocolRawPacket_t;
+
+// --------------------------------------------------------------------------------------------------------------------
+// FUNCTION PROTOTYPES
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+* @brief Call in order to initialize this module.
+* 
+* @param driver Parameters that allow this module to interact with the hardware.
+* @param context Context variables that can be used by this module.
+* @return int #PM_PROTOCOL_SUCCESS on success, #PM_PROTOCOL_FAILURE otherwise.
+*/
+int pmProtocolInit(const pmProtocolDriver_t * driver, pmProtocolContext_t * context);
+
+/**
+* @brief This must be called periodically to allow this module to perform work.
+* 
+* @param ticks_ms Current ticks in ms to allow this module to perform timeout detection.
+* @param context Context variables that can be used by this module.
+*/
+void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context);
+
+/**
+* @brief Call to queue up a message for transmission.
+* 
+* @param tx The definition for the message to send.
+* @param context Context variables that can be used by this module.
+* @return int #PM_PROTOCOL_SUCCESS on success. 
+*             #PM_PROTOCOL_TX_IN_PROGRESS if a transmit is already in progress.
+*             #PM_PROTOCOL_FAILURE otherwise.
+*/
+int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * context);
+
+/**
+* @brief Call to read a message from the receive queue.
+* 
+* @param rx The buffer to load the received message into.
+* @param context Context variables that can be used by this module.
+* @return int #PM_PROTOCOL_SUCCESS if a message could be read.
+*             #PM_PROTOCOL_FAILURE if a message could not be read.
+*             #PM_PROTOCOL_TIMEOUT if a message was in progress but failed due to a timeout.
+*/
+int pmProtocolReadPacket(pmProtocolRawPacket_t * rx, pmProtocolContext_t * context);
 
 #endif // PM_PROTOCOL_H
