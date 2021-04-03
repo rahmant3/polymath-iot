@@ -4,6 +4,7 @@ This repo contains the source code for polymath-iot (Quickfeather controller por
 ## Directory Structure
 - source -- Contains the source code for this project
 - source/app -- Contains the application specific code created by us.
+- source/fpga -- Contains the fpga logic for the application.
 - source/qorc-sdk -- Contains the SDK source the application is built on top of. Copied from here: https://github.com/QuickLogic-Corp/qorc-sdk
 
 ## Computer Setup (Command Line)

@@ -46,6 +46,8 @@
 #include "fpga_loader.h"    // API for loading FPGA
 #include "top_bit.h"        // FPGA bitstream to load into FPGA
 
+#include "pm_core.h"
+
 extern const struct cli_cmd_entry my_main_menu[];
 
 
@@ -60,20 +62,21 @@ const char *SOFTWARE_VERSION_STR;
 extern void qf_hardwareSetup();
 static void nvic_init(void);
 
+#if 1
 static void uartFpgaTestTask(void * params)
 {
     bool flit = true;
     const char * header = "Hello -- this is a UART FPGA\n";
 
-    uart_tx_buf(UART_ID_FPGA, header, strlen(header));
+    uart_tx_buf(UART_ID_FPGA_UART1, header, strlen(header));
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        int numBytes = uart_rx_available(UART_ID_FPGA);
+        int numBytes = uart_rx_available(UART_ID_FPGA_UART1);
         while (numBytes > 0)
         {
-            uart_tx(UART_ID_FPGA, uart_rx(UART_ID_FPGA));
+            uart_tx(UART_ID_FPGA_UART1, uart_rx(UART_ID_FPGA_UART1));
             numBytes--;
         }
         
@@ -81,11 +84,12 @@ static void uartFpgaTestTask(void * params)
         HAL_GPIO_Write(5, flit);
     }
 }
+#endif
 
 int main(void)
 {
 
-    SOFTWARE_VERSION_STR = "qorc-sdk/qf_apps/qf_fpgauart_app";
+    SOFTWARE_VERSION_STR = "polymath-iot/app";
     
     qf_hardwareSetup();
     nvic_init();
@@ -117,7 +121,7 @@ int main(void)
     uartObj.intrMode = UART_INTR_ENABLE;
     uartHandlerUpdate(uart_id,&uartObj);
 
-    for (int i = 0; i != 4000000; i++) ;   // [TODO] Analyze and remove need for this delay
+    for (volatile int i = 0; i != 4000000; i++) ;   // [TODO] Analyze and remove need for this delay
     uart_init( uart_id, NULL, NULL, &uartObj);
 
     uint32_t device_id = *(uint32_t *)FPGA_PERIPH_BASE ;
@@ -141,21 +145,23 @@ int main(void)
 
     dbg_str("\n\n");
     dbg_str( "##########################\n");
-    dbg_str( "Quicklogic QuickFeather FPGA-UART Test Application\n");
+    dbg_str( "Polymath IoT Application\n");
     dbg_str( "SW Version: ");
     dbg_str( SOFTWARE_VERSION_STR );
     dbg_str( "\n" );
     dbg_str( __DATE__ " " __TIME__ "\n" );
     dbg_str( "##########################\n\n");
-	
-	dbg_str( "\n\nHello world!!\n\n");	// <<<<<<<<<<<<<<<<<<<<<  Change me!
 
     CLI_start_task( my_main_menu );
-        
+
+    #if 0   
     if (pdPASS == xTaskCreate(uartFpgaTestTask, "FPGA Task", 1024, NULL, (configMAX_PRIORITIES - 1), NULL))
     {
         HAL_GPIO_Write(5, true);
     }
+    #endif
+
+    //pm_main();
     
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
