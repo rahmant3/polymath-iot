@@ -77,7 +77,15 @@ static pmProtocolDriver_t g_pmUartMasterDriver =
 // --------------------------------------------------------------------------------------------------------------------
 static int pmMasterUartTx(uint8_t * data, uint8_t numBytes)
 {
-    uart_tx_raw_buf(PM_COPRO_UART, data, numBytes);
+#if 0
+	for (int ix = 0; ix < numBytes; ix++)
+	{
+	    uart_tx_raw_buf(PM_COPRO_UART, &data[ix], 1);
+	    vTaskDelay(1); // Delay 1 ms.
+	}
+#endif
+
+	uart_tx_raw_buf(PM_COPRO_UART, data, numBytes);
 
     return numBytes;
 }
@@ -135,6 +143,9 @@ void pm_test_send(const char *s)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+static volatile int testSend = 0;
+
 static void pmCoreRtosTask(void * params)
 {
     TickType_t lastWakeupTicks = xTaskGetTickCount();
@@ -153,6 +164,12 @@ static void pmCoreRtosTask(void * params)
         {
             TickType_t nowTicks = xTaskGetTickCount();
             uint32_t nowTicks_ms  = nowTicks * 1000 / configTICK_RATE_HZ;
+
+            if (testSend)
+            {
+            	pm_test_send("test");
+            	testSend = 0;
+            }
 
             if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
             {

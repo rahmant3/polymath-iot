@@ -19,6 +19,8 @@
 #define START_BYTE   0x01
 #define END_OF_PACKET_TIMEOUT_ms 250
 
+#define DEBUG
+
 // --------------------------------------------------------------------------------------------------------------------
 // TYPEDEFS
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,8 +132,11 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         // Handle transmits.
         if (context->txInProgress)
         {
-            uint8_t len = context->txBuffer[1];
-            
+			#if 1
+            uint8_t dummyByte = 0x55;
+            context->driver->tx(&dummyByte, 1);
+			#endif
+
             if (0 < context->driver->tx(context->txBuffer, context->txBuffer[1]))
             {
                 context->txInProgress = false; // Transmit completed.
@@ -171,11 +176,13 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
                 }
                 else
                 {
-                    if ((context->rxStartTicks - ticks_ms) > END_OF_PACKET_TIMEOUT_ms)
-                    {
-                        // Timeout occurred.
-                        context->rxState = TIMEOUT_OCCURRED;
-                    }
+					#ifndef DEBUG
+						if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
+						{
+							// Timeout occurred.
+							context->rxState = TIMEOUT_OCCURRED;
+						}
+					#endif
                 }
                 break;
             }
@@ -205,11 +212,13 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
                 }
                 else
                 {
-                    if ((context->rxStartTicks - ticks_ms) > END_OF_PACKET_TIMEOUT_ms)
-                    {
-                        // Timeout occurred.
-                        context->rxState = TIMEOUT_OCCURRED;
-                    }
+					#ifndef DEBUG
+						if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
+						{
+							// Timeout occurred.
+							context->rxState = TIMEOUT_OCCURRED;
+						}
+					#endif
                 }
 
                 break;

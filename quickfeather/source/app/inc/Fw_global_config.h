@@ -93,11 +93,14 @@
 // #define UART_ID_USBSERIAL    6   // Write data to USB serial port
 // #define UART_ID_FPGA_UART1   7   // FPGA UART 1
 
-#define DEBUG_UART        UART_ID_HW    // UART used for debug prints
+//#define DEBUG_UART        UART_ID_HW    // UART used for debug prints
+#define DEBUG_UART        UART_ID_DISABLED    // UART used for debug prints
 
-#define PM_BLE_UART       UART_ID_HW      // UART used for talking to the BLE part.
+//#define PM_BLE_UART       UART_ID_HW      // UART used for talking to the BLE part.
+#define PM_BLE_UART       UART_ID_FPGA_UART1      // UART used for talking to the BLE part.
 #define PM_TRAINING_UART  DEBUG_UART      // UART used for training with SensiML
-#define PM_COPRO_UART     UART_ID_FPGA    // UART used for talking to the slave processor.
+//#define PM_COPRO_UART     UART_ID_FPGA    // UART used for talking to the slave processor.
+#define PM_COPRO_UART     UART_ID_HW    // UART used for talking to the slave processor.
 
 #define USE_SEMIHOSTING     0       // 1 => use semihosting, 0 => use UART_ID_HW
 
