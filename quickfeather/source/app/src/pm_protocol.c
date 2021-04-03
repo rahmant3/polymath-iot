@@ -9,7 +9,6 @@
 // --------------------------------------------------------------------------------------------------------------------
 // INCLUDES
 // --------------------------------------------------------------------------------------------------------------------
-#include <stdbool.h>
 #include <string.h>
 
 #include "pm_protocol.h"
@@ -83,7 +82,7 @@ int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * conte
             {
                 checksum += context->txBuffer[index];
             }
-            context->txBuffer[ix++] = ~checksum;
+            context->txBuffer[ix++] = ~checksum + 1;
 
             rc = PM_PROTOCOL_SUCCESS;
         }
