@@ -180,7 +180,7 @@ static void pmCoreRtosTask(void * params)
                 {
                     dbg_str("Error: Encountered a checksum error on the slave node.\r\n");
                 }
-                else
+                else if (PM_PROTOCOL_SUCCESS == rc)
                 {
                     dbg_str("Successfully obtained a packet on the slave node. Echoing.\r\n");
                     if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&slaveRx, &g_pmUartSlaveContext))

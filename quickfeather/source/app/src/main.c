@@ -161,7 +161,7 @@ int main(void)
     }
     #endif
 
-    //pm_main();
+    pm_main();
     
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
