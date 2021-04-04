@@ -114,17 +114,20 @@ int pmProtocolReadPacket(pmProtocolRawPacket_t * rx, pmProtocolContext_t * conte
         pmProtocolRxStates_t rxState = context->rxState;
         if (rxState == TIMEOUT_OCCURRED)
         {
+        	context->rxState = WAITING_FOR_START;
             rc = PM_PROTOCOL_RX_TIMEOUT;
         }
         else if (rxState == CHECKSUM_ERROR)
         {
+        	context->rxState = WAITING_FOR_START;
             rc = PM_PROTOCOL_CHECKSUM_ERROR;
         }
         else if (rxState == PAYLOAD_READY)
         {
-            rx->numBytes = context->rxBuffer[1] + PM_NUM_OVERHEAD_BYTES;
+            rx->numBytes = context->rxBuffer[1] - PM_NUM_OVERHEAD_BYTES;
             (void)memcpy(rx->bytes, &context->rxBuffer[PM_NUM_OVERHEAD_BYTES - 1], rx->numBytes);
 
+        	context->rxState = WAITING_FOR_START;
             rc = PM_PROTOCOL_SUCCESS;
         }
     }

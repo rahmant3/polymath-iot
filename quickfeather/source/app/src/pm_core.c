@@ -193,8 +193,20 @@ static void pmCoreRtosTask(void * params)
             
             // Check for reads on the master node.
             rc = pmProtocolReadPacket(&masterRx, &g_pmUartMasterContext);
-
             #ifdef ENABLE_SLAVE_LOOPBACK_TEST
+            	if (PM_PROTOCOL_RX_TIMEOUT == rc)
+				{
+					dbg_str("Error: Encountered a timeout on the MASTER node.\r\n");
+				}
+				else if (PM_PROTOCOL_CHECKSUM_ERROR == rc)
+				{
+					dbg_str("Error: Encountered a checksum error on the MASTER node.\r\n");
+				}
+				else if (PM_PROTOCOL_SUCCESS == rc)
+            	{
+            		dbg_str("Successfully obtained a packet on the MASTER node.\r\n");
+            	}
+
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
 
                 // Check for reads on the slave node.
