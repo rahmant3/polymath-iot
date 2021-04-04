@@ -190,9 +190,29 @@ static void pmCoreRtosTask(void * params)
             #ifdef ENABLE_SLAVE_LOOPBACK_TEST
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
             #endif
+
+			if (testSend)
+			{
+				pmProtocolRawPacket_t masterTx;
+				masterTx.numBytes = strnlen("test", PM_MAX_PAYLOAD_BYTES);
+				(void)memcpy(masterTx.bytes,"test", masterTx.numBytes);
+
+				if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&masterTx, &g_pmUartMasterContext))
+				{
+					dbg_str("Successfully sent the test string on the master node: ");
+					dbg_str("test");
+					dbg_str("\r\n");
+				}
+				else
+				{
+					dbg_str("Error: Failed to send the test string on the master node.\r\n");
+				}
+
+				testSend = 0;
+			}
         }
 
-
+/*
         uint8_t usrBtn;
 		HAL_GPIO_Read(0, &usrBtn);
 		if (!usrBtn)
@@ -203,7 +223,7 @@ static void pmCoreRtosTask(void * params)
 				testSend = 1;
 			}
         }
-
+*/
         vTaskDelayUntil(&lastWakeupTicks, pdMS_TO_TICKS(PM_CORE_RTOS_TASK_PERIOD_ms));
     }
 }

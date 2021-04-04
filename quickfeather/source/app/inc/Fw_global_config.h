@@ -101,7 +101,9 @@
 #define PM_TRAINING_UART  DEBUG_UART      // UART used for training with SensiML
 #define PM_COPRO_UART     UART_ID_HW    // UART used for talking to the slave processor.
 #else
-#define DEBUG_UART        UART_ID_DISABLED    // UART used for debug prints
+//#define DEBUG_UART        UART_ID_DISABLED    // UART used for debug prints
+
+#define DEBUG_UART        UART_ID_HW    // UART used for debug prints
 
 //#define PM_BLE_UART       UART_ID_HW      // UART used for talking to the BLE part.
 #define PM_BLE_UART       UART_ID_FPGA_UART1      // UART used for talking to the BLE part.

@@ -85,6 +85,7 @@ typedef struct pmProtocolContext_s
     const struct pmProtocolDriver_s * driver;
 
     bool txInProgress;
+    bool txWaitingForAck;
     uint8_t txBuffer[MAX_TX_BYTES];
 
     uint8_t rxState;

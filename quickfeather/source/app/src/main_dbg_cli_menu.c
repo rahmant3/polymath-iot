@@ -223,8 +223,16 @@ static void pm_slave_receive_raw(const struct cli_cmd_entry *pEntry)
         dbg_str("Successfully obtained a packet on the slave node. Echoing.\r\n");
         if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&slaveRx, &g_pmUartSlaveContext))
         {
-            dbg_str("Error: Failed to transmit echoed packet.\r\n");
+            dbg_str("Successfully echo'd the packet.\r\n");
         }
+        else
+        {
+        	dbg_str("Error: Failed to transmit echoed packet.\r\n");
+        }
+    }
+    else
+    {
+    	dbg_str("No packet received.\r\n");
     }
 }
 
@@ -246,7 +254,7 @@ static void pm_slave_receive_cmd(const struct cli_cmd_entry *pEntry)
 				slaveTx.commandCode = slaveRx.commandCode | PM_PROTOCOL_RESP_MASK;
 				slaveTx.protocolInfo.protocolIdentifier = PM_PROTOCOL_IDENTIFIER;
 
-				if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
+				if (PM_PROTOCOL_SUCCESS != pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
 				{
 					dbg_str("Error: Failed to transmit response from slave.\r\n");
 				}
@@ -259,7 +267,7 @@ static void pm_slave_receive_cmd(const struct cli_cmd_entry *pEntry)
 				slaveTx.commandCode = slaveRx.commandCode | PM_PROTOCOL_RESP_MASK;
 				slaveTx.writeStatus.status = slaveRx.writeStatus.status;
 
-				if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
+				if (PM_PROTOCOL_SUCCESS != pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
 				{
 					dbg_str("Error: Failed to transmit response from slave.\r\n");
 				}

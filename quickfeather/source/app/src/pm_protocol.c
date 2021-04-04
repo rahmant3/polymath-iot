@@ -147,10 +147,27 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         // Handle transmits.
         if (context->txInProgress)
         {
-            if (0 < context->driver->tx(context->txBuffer, context->txBuffer[LEN_BYTE_OFFSET]))
-            {
-                context->txInProgress = false; // Transmit completed.
-            }
+        	if (!context->txWaitingForAck)
+        	{
+        		// Transmit the first two bytes.
+				if (0 < context->driver->tx(context->txBuffer, LEN_BYTE_OFFSET + 1))
+				{
+					context->txWaitingForAck = true;
+				}
+        	}
+        	else
+        	{
+        		uint8_t ack;
+        		if (1 == context->driver->rx(&ack, 1))
+        		{
+        			// Ack received, send the rest of the bytes.
+        			context->txWaitingForAck = false;
+        			if (0 < context->driver->tx(&context->txBuffer[LEN_BYTE_OFFSET + 1], context->txBuffer[LEN_BYTE_OFFSET] - 2))
+        			{
+        				context->txInProgress = false; // Transmit completed.
+        			}
+        		}
+        	}
         }
 
         // Handle receives.
@@ -158,52 +175,41 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         {
             case WAITING_FOR_START:
             {
-                if (1 == context->driver->rx(context->rxBuffer, 1))
+                if (2 == context->driver->rx(context->rxBuffer, 2))
                 {
                     if (context->rxBuffer[START_BYTE_OFFSET] == START_BYTE)
                     {
                     	DEBUG_PRINTF("Received a start byte.\r\n");
                         context->rxStartTicks = ticks_ms;
                         context->rxBytes = 1;
-                        context->rxState = WAITING_FOR_LEN;
-                    }
-                }
-                break;
-            }
-            case WAITING_FOR_LEN:
-            {
-                if (1 == context->driver->rx(&context->rxBuffer[LEN_BYTE_OFFSET], 1))
-                {
-                    context->rxLen = context->rxBuffer[LEN_BYTE_OFFSET];
-                    if (context->rxLen <= MAX_RX_BYTES)
-                    {
-                    	DEBUG_PRINTF("Received a length byte.\r\n");
-                        context->rxBytes = 2;
-                        context->rxState = WAITING_FOR_DATA;
-                    }
-                    else
-                    {
-                        context->rxState = CHECKSUM_ERROR;
-                    }
-                }
-                else
-                {
-					#ifndef DEBUG
-						if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
+
+                        context->rxLen = context->rxBuffer[LEN_BYTE_OFFSET];
+						if (context->rxLen <= MAX_RX_BYTES)
 						{
-							// Timeout occurred.
-							context->rxState = TIMEOUT_OCCURRED;
+							uint8_t ack = 0x40;
+							context->driver->tx(&ack, 1);
+
+							DEBUG_PRINTF("Received a length byte.\r\n");
+							context->rxBytes = 2;
+							context->rxState = WAITING_FOR_DATA;
+
+
+			                uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
+			                    context->rxLen - context->rxBytes);
+
+			                context->rxBytes += rxBytes;
+
 						}
-					#endif
+						else
+						{
+							context->rxState = CHECKSUM_ERROR;
+						}
+                    }
                 }
                 break;
             }
             case WAITING_FOR_DATA:
             {
-                uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes], 
-                    context->rxLen - context->rxBytes);
-
-                context->rxBytes += rxBytes;
                 if (context->rxBytes >= context->rxLen)
                 {
                     // We have the full payload ready. Verify the checksum.
@@ -226,13 +232,20 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
                 }
                 else
                 {
-					#ifndef DEBUG
-						if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
-						{
+					if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
+					{
+						#ifndef DEBUG
 							// Timeout occurred.
 							context->rxState = TIMEOUT_OCCURRED;
-						}
-					#endif
+						#endif
+					}
+					else
+					{
+						uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
+							context->rxLen - context->rxBytes);
+
+						context->rxBytes += rxBytes;
+					}
                 }
 
                 break;
