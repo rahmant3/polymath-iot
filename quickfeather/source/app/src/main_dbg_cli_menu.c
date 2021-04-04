@@ -75,15 +75,207 @@ static void userbutton(const struct cli_cmd_entry *pEntry)
     return;
 }
 
-static void pm_send(const struct cli_cmd_entry *pEntry)
+#include "pm_protocol.h"
+
+#define ENABLE_SLAVE_LOOPBACK_TEST
+
+extern pmProtocolContext_t g_pmUartMasterContext;
+
+#ifdef ENABLE_SLAVE_LOOPBACK_TEST
+extern pmProtocolContext_t g_pmUartSlaveContext;
+#endif
+
+static void pm_send_raw(const struct cli_cmd_entry *pEntry)
 {
     char send_string_buf[64];
     memset(send_string_buf, 0, sizeof(send_string_buf));
 
     CLI_string_buf_getshow( "string to send ", send_string_buf, sizeof(send_string_buf) );
     
-    pm_test_send(send_string_buf);
+    pmProtocolRawPacket_t masterTx;
+	masterTx.numBytes = strnlen(send_string_buf, PM_MAX_PAYLOAD_BYTES);
+	(void)memcpy(masterTx.bytes, send_string_buf, masterTx.numBytes);
+
+	if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&masterTx, &g_pmUartMasterContext))
+	{
+		dbg_str("Successfully sent the test string on the master node: ");
+		dbg_str(send_string_buf);
+		dbg_str("\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send the test string on the master node.\r\n");
+	}
 }
+
+static void pm_receive_raw(const struct cli_cmd_entry *pEntry)
+{
+    char receive_string_buf[64];
+    memset(receive_string_buf, 0, sizeof(receive_string_buf));
+
+    pmProtocolRawPacket_t masterRx;
+
+    uint8_t rc = pmProtocolReadPacket(&masterRx, &g_pmUartMasterContext);
+	if (PM_PROTOCOL_RX_TIMEOUT == rc)
+	{
+		dbg_str("Error: Encountered a timeout on the MASTER node.\r\n");
+	}
+	else if (PM_PROTOCOL_CHECKSUM_ERROR == rc)
+	{
+		dbg_str("Error: Encountered a checksum error on the MASTER node.\r\n");
+	}
+	else if (PM_PROTOCOL_SUCCESS == rc)
+	{
+		dbg_str("Successfully obtained a packet on the MASTER node.\r\n");
+		int len = strnlen(masterRx.bytes, masterRx.numBytes);
+
+		if (len < sizeof(receive_string_buf))
+		{
+			memcpy(receive_string_buf, masterRx.bytes, strnlen(masterRx.bytes, masterRx.numBytes));
+			dbg_str(receive_string_buf);
+			dbg_str("\r\n");
+		}
+	}
+}
+
+static void pm_cmd_status(const struct cli_cmd_entry *pEntry)
+{
+	pmCmdPayloadDefinition_t masterTx;
+
+	masterTx.commandCode = PM_CMD_WRITE_STATUS;
+	masterTx.writeStatus.status = PM_RET_SUCCESS;
+	if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&masterTx, &g_pmUartMasterContext))
+	{
+		dbg_str("Successfully sent the status on the master node.\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send the status on the master node.\r\n");
+	}
+}
+
+
+static void pm_cmd_protocol(const struct cli_cmd_entry *pEntry)
+{
+	pmCmdPayloadDefinition_t masterTx;
+
+	masterTx.commandCode = PM_CMD_PROTOCOL_ID;
+	if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&masterTx, &g_pmUartMasterContext))
+	{
+		dbg_str("Successfully sent a request for the protocol ID on the master node.\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send a request for the protocol ID on the master node.\r\n");
+	}
+}
+
+static void pm_cmd_rx(const struct cli_cmd_entry *pEntry)
+{
+	pmCmdPayloadDefinition_t masterRx;
+
+	if (PM_PROTOCOL_SUCCESS == pmProtocolRead(&masterRx, &g_pmUartMasterContext))
+	{
+		dbg_str("Successfully read a payload on the master node.\r\n");
+		switch (masterRx.commandCode & 0x7F)
+		{
+			case PM_CMD_NEGATIVE_ACK:
+				dbg_str("Received a negative ACK.\r\n");
+				break;
+			case PM_CMD_PROTOCOL_ID:
+				dbg_str("Receive a protocol ID of: ");
+				dbg_hex32(masterRx.protocolInfo.protocolIdentifier);
+				dbg_str("\r\n");
+				break;
+			case PM_CMD_WRITE_STATUS:
+				dbg_str("Receive a write status of: ");
+				dbg_int(masterRx.writeStatus.status);
+				dbg_str("\r\n");
+				break;
+			default:
+				dbg_str("Received unhandled command.\r\n");
+				break;
+		}
+	}
+	else
+	{
+		dbg_str("Error: Failed to read a payload on the master node.\r\n");
+	}
+}
+
+
+static void pm_slave_receive_raw(const struct cli_cmd_entry *pEntry)
+{
+    // Check for reads on the slave node.
+    pmProtocolRawPacket_t slaveRx;
+
+    uint8_t rc = pmProtocolReadPacket(&slaveRx, &g_pmUartSlaveContext);
+    if (PM_PROTOCOL_RX_TIMEOUT == rc)
+    {
+        dbg_str("Error: Encountered a timeout on the slave node.\r\n");
+    }
+    else if (PM_PROTOCOL_CHECKSUM_ERROR == rc)
+    {
+        dbg_str("Error: Encountered a checksum error on the slave node.\r\n");
+    }
+    else if (PM_PROTOCOL_SUCCESS == rc)
+    {
+        dbg_str("Successfully obtained a packet on the slave node. Echoing.\r\n");
+        if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&slaveRx, &g_pmUartSlaveContext))
+        {
+            dbg_str("Error: Failed to transmit echoed packet.\r\n");
+        }
+    }
+}
+
+
+static void pm_slave_receive_cmd(const struct cli_cmd_entry *pEntry)
+{
+    // Check for reads on the slave node.
+	pmCmdPayloadDefinition_t slaveRx;
+
+	if (PM_PROTOCOL_SUCCESS == pmProtocolRead(&slaveRx, &g_pmUartSlaveContext))
+	{
+		dbg_str("Successfully read a payload on the slave node. Responding\r\n");
+		switch (slaveRx.commandCode & 0x7F)
+		{
+			case PM_CMD_PROTOCOL_ID:
+			{
+				// Transmit the current protocol ID.
+				pmCmdPayloadDefinition_t slaveTx;
+				slaveTx.commandCode = slaveRx.commandCode | PM_PROTOCOL_RESP_MASK;
+				slaveTx.protocolInfo.protocolIdentifier = PM_PROTOCOL_IDENTIFIER;
+
+				if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
+				{
+					dbg_str("Error: Failed to transmit response from slave.\r\n");
+				}
+				break;
+			}
+			case PM_CMD_WRITE_STATUS:
+			{
+				// Echo back the status.
+				pmCmdPayloadDefinition_t slaveTx;
+				slaveTx.commandCode = slaveRx.commandCode | PM_PROTOCOL_RESP_MASK;
+				slaveTx.writeStatus.status = slaveRx.writeStatus.status;
+
+				if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
+				{
+					dbg_str("Error: Failed to transmit response from slave.\r\n");
+				}
+				break;
+			}
+			default:
+				dbg_str("Received unhandled command on the slave.\r\n");
+				break;
+		}
+	}
+	else
+	{
+		dbg_str("Error: Failed to read a payload on the master node.\r\n");
+	}
+}
+
 
 const struct cli_cmd_entry qf_diagnostic[] =
 {
@@ -96,7 +288,17 @@ const struct cli_cmd_entry qf_diagnostic[] =
 
 const struct cli_cmd_entry pm_test[] =
 {
-    CLI_CMD_SIMPLE( "send", pm_send, "Send user string over the master node." ),
+    CLI_CMD_SIMPLE( "send_raw", pm_send_raw, "Send user string over the master node." ),
+	CLI_CMD_SIMPLE( "receive_raw", pm_receive_raw, "Read a user string on the master node." ),
+
+	CLI_CMD_SIMPLE( "send_cmd_status", pm_cmd_status, "Send a status to the slave node." ),
+	CLI_CMD_SIMPLE( "send_cmd_protocol", pm_cmd_protocol, "Request protocol ID from the slave node." ),
+	//CLI_CMD_SIMPLE( "send_cmd_sensor", pm_cmd_sensors, "Request sensor data from the slave node." ),
+	CLI_CMD_SIMPLE( "receive_cmd", pm_cmd_rx, "Read a response command on the master node." ),
+
+
+	CLI_CMD_SIMPLE( "slave_receive_raw", pm_slave_receive_raw, "Read user string from the slave node." ),
+	CLI_CMD_SIMPLE( "slave_receive_cmd", pm_slave_receive_cmd, "Read command from the slave node." ),
     CLI_CMD_TERMINATE()
 };
 

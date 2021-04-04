@@ -17,6 +17,10 @@
 // DEFINES
 // --------------------------------------------------------------------------------------------------------------------
 #define START_BYTE   0x01
+
+#define START_BYTE_OFFSET 0 // Byte offset into a packet containing the start byte.
+#define LEN_BYTE_OFFSET   1 // Byte offset into a packet containing the length byte.
+
 #define END_OF_PACKET_TIMEOUT_ms 250
 
 #define DEBUG
@@ -81,13 +85,13 @@ int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * conte
             context->txInProgress = true;
             
             uint8_t ix = 0;
-            context->txBuffer[0] = START_BYTE;
-            context->txBuffer[1] = tx->numBytes + PM_NUM_OVERHEAD_BYTES; // Extra 3 bytes for start, length, checksum.
+            context->txBuffer[START_BYTE_OFFSET] = START_BYTE;
+            context->txBuffer[LEN_BYTE_OFFSET] = tx->numBytes + PM_NUM_OVERHEAD_BYTES; // Extra 3 bytes for start, length, checksum.
 
             (void)memcpy(&context->txBuffer[PM_NUM_OVERHEAD_BYTES - 1], tx->bytes, tx->numBytes);
             
             uint8_t checksum = 0x00;
-            uint8_t len = context->txBuffer[1];
+            uint8_t len = context->txBuffer[LEN_BYTE_OFFSET];
             for (uint8_t index = 0; index < (len - 1); index++)
             {
                 checksum += context->txBuffer[index];
@@ -124,7 +128,7 @@ int pmProtocolReadPacket(pmProtocolRawPacket_t * rx, pmProtocolContext_t * conte
         }
         else if (rxState == PAYLOAD_READY)
         {
-            rx->numBytes = context->rxBuffer[1] - PM_NUM_OVERHEAD_BYTES;
+            rx->numBytes = context->rxBuffer[LEN_BYTE_OFFSET] - PM_NUM_OVERHEAD_BYTES;
             (void)memcpy(rx->bytes, &context->rxBuffer[PM_NUM_OVERHEAD_BYTES - 1], rx->numBytes);
 
         	context->rxState = WAITING_FOR_START;
@@ -143,12 +147,7 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         // Handle transmits.
         if (context->txInProgress)
         {
-			#if 1
-            uint8_t dummyByte = 0x55;
-            context->driver->tx(&dummyByte, 1);
-			#endif
-
-            if (0 < context->driver->tx(context->txBuffer, context->txBuffer[1]))
+            if (0 < context->driver->tx(context->txBuffer, context->txBuffer[LEN_BYTE_OFFSET]))
             {
                 context->txInProgress = false; // Transmit completed.
             }
@@ -161,7 +160,7 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
             {
                 if (1 == context->driver->rx(context->rxBuffer, 1))
                 {
-                    if (context->rxBuffer[0] == START_BYTE)
+                    if (context->rxBuffer[START_BYTE_OFFSET] == START_BYTE)
                     {
                     	DEBUG_PRINTF("Received a start byte.\r\n");
                         context->rxStartTicks = ticks_ms;
@@ -173,9 +172,9 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
             }
             case WAITING_FOR_LEN:
             {
-                if (1 == context->driver->rx(&context->rxBuffer[1], 1))
+                if (1 == context->driver->rx(&context->rxBuffer[LEN_BYTE_OFFSET], 1))
                 {
-                    context->rxLen = context->rxBuffer[1];
+                    context->rxLen = context->rxBuffer[LEN_BYTE_OFFSET];
                     if (context->rxLen <= MAX_RX_BYTES)
                     {
                     	DEBUG_PRINTF("Received a length byte.\r\n");
@@ -247,6 +246,221 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
     }
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+int pmProtocolSend(pmCmdPayloadDefinition_t * tx, pmProtocolContext_t * context)
+{
+    int rc = PM_PROTOCOL_FAILURE;
+    pmProtocolRawPacket_t rawTx;
+    if (tx->commandCode < 0x7F) // This is a master transmitting.
+    {
+        switch (tx->commandCode)
+        {
+            case PM_CMD_PROTOCOL_ID: // Fall through
+            case PM_CMD_CLUSTER_ID:  // Fall through
+            case PM_CMD_GET_SENSORS: // Fall through
+            {
+                rawTx.bytes[0] = tx->commandCode;
+                rawTx.numBytes = 1;
 
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            case PM_CMD_WRITE_STATUS: 
+            {
+                rawTx.bytes[0] = tx->commandCode;
+                rawTx.bytes[1] = tx->writeStatus.status;
+
+                rawTx.numBytes = 2;
+
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    else // This is a slave transmitting.
+    {
+        switch (tx->commandCode & 0x7F)
+        {
+            case PM_CMD_PROTOCOL_ID:
+            {
+                rawTx.bytes[0] = tx->commandCode;
+                rawTx.bytes[1] = tx->protocolInfo.protocolIdentifier & 0xFF;
+                rawTx.bytes[2] = (tx->protocolInfo.protocolIdentifier >> 8)  & 0xFF;
+                rawTx.bytes[3] = (tx->protocolInfo.protocolIdentifier >> 16) & 0xFF;
+                rawTx.bytes[4] = (tx->protocolInfo.protocolIdentifier >> 24) & 0xFF;
+                rawTx.numBytes = 5;
+
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            case PM_CMD_CLUSTER_ID:
+            {
+                rawTx.bytes[0] = tx->commandCode;
+                rawTx.bytes[1] = tx->clusterId.clusterIdentifier & 0xFF;
+                rawTx.bytes[2] = (tx->clusterId.clusterIdentifier >> 8)  & 0xFF;
+                rawTx.bytes[3] = (tx->clusterId.clusterIdentifier >> 16) & 0xFF;
+                rawTx.bytes[4] = (tx->clusterId.clusterIdentifier >> 24) & 0xFF;
+                rawTx.numBytes = 5;
+
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            case PM_CMD_GET_SENSORS:
+            {
+                rawTx.bytes[0] = tx->commandCode;
+                uint8_t ix = 1;
+                for (uint8_t sensorIdx = 0; sensorIdx < tx->getSensors.numSensors; sensorIdx++)
+                {
+                    rawTx.bytes[ix++] = tx->getSensors.sensors[0].sensorId && 0xFF;
+                    rawTx.bytes[ix++] = (tx->getSensors.sensors[0].sensorId >> 8) && 0xFF;
+                    rawTx.bytes[ix++] = tx->getSensors.sensors[0].data && 0xFF;
+                    rawTx.bytes[ix++] = (tx->getSensors.sensors[0].data >> 8) && 0xFF;
+                }
+                rawTx.numBytes = ix;
+
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            case PM_CMD_WRITE_STATUS: 
+            {
+                rawTx.bytes[0] = tx->commandCode;
+                rawTx.bytes[1] = tx->writeStatus.status;
+
+                rawTx.numBytes = 2;
+
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            case PM_CMD_NEGATIVE_ACK:
+            {
+                rawTx.numBytes = 1;
+                rc = PM_PROTOCOL_SUCCESS;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    if (PM_PROTOCOL_SUCCESS == rc)
+    {
+        rc = pmProtocolSendPacket(&rawTx, context);
+    }
+
+    return rc;
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------
+int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context)
+{
+    int rc = PM_PROTOCOL_FAILURE;
+
+    pmCmdPayloadDefinition_t localRx;
+    pmProtocolRawPacket_t rawRx;
+
+    rc = pmProtocolReadPacket(&rawRx, context);
+
+    if (PM_PROTOCOL_SUCCESS == rc) // We received a packet.
+    {
+        rc = PM_PROTOCOL_RX_CMD_INVALID;
+
+        localRx.commandCode = rawRx.bytes[0];
+        if (localRx.commandCode < 0x7F) // This is a slave receiving a master packet.
+        {
+            switch (localRx.commandCode)
+            {
+                case PM_CMD_PROTOCOL_ID: // Fall through
+                case PM_CMD_CLUSTER_ID:  // Fall through
+                case PM_CMD_GET_SENSORS: // Fall through
+                {
+                    rc = PM_PROTOCOL_SUCCESS;
+                    break;
+                }
+                case PM_CMD_WRITE_STATUS: 
+                {
+                    localRx.writeStatus.status = rawRx.bytes[1];
+                    rc = PM_PROTOCOL_SUCCESS;
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        else // This is a master receiving a slave packet.
+        {
+            switch (localRx.commandCode & 0x7F)
+            {
+                case PM_CMD_PROTOCOL_ID:
+                {
+                    if (rawRx.numBytes == 5)
+                    {
+                        localRx.protocolInfo.protocolIdentifier = rawRx.bytes[1] 
+                            + (rawRx.bytes[2] << 8) 
+                            + (rawRx.bytes[3] << 16) 
+                            + (rawRx.bytes[4] << 24);
+                        
+                        rc = PM_PROTOCOL_SUCCESS;
+                    }
+                    break;
+                }
+                case PM_CMD_CLUSTER_ID:
+                {
+                    if (rawRx.numBytes == 5)
+                    {
+                        localRx.clusterId.clusterIdentifier = rawRx.bytes[1] 
+                            + (rawRx.bytes[2] << 8) 
+                            + (rawRx.bytes[3] << 16) 
+                            + (rawRx.bytes[4] << 24);
+                        
+                        rc = PM_PROTOCOL_SUCCESS;
+                    }
+                    break;
+                }
+                case PM_CMD_GET_SENSORS:
+                {
+                    // Aside from the command byte, the rest of the bytes should be a multiple of 4.
+                    if ((rawRx.numBytes > 0) && ((rawRx.numBytes - 1) % 4 == 0))
+                    {
+                        localRx.getSensors.numSensors = (rawRx.numBytes - 1) / 4;
+                        for (uint8_t ix = 0; ix < localRx.getSensors.numSensors; ix++)
+                        {
+                            localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (4 * ix)] + rawRx.bytes[2 + (4 * ix)] << 8;
+                            localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (4 * ix)] + rawRx.bytes[4 + (4 * ix)] << 8;
+                            
+                            rc = PM_PROTOCOL_SUCCESS;
+                        }   
+                    }
+                    break;
+                }
+                case PM_CMD_WRITE_STATUS: 
+                {
+                    if (rawRx.numBytes == 2)
+                    {
+                        localRx.writeStatus.status = rawRx.bytes[1];
+                        rc = PM_PROTOCOL_SUCCESS;
+                    }
+                    break;
+                }
+                case PM_CMD_NEGATIVE_ACK:
+                {
+                    rc = PM_PROTOCOL_SUCCESS;
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
+
+    if (PM_PROTOCOL_SUCCESS == rc)
+    {
+        (void)memcpy(rx, &localRx, sizeof(localRx));
+    }
+
+    return rc;
+}
 
 

@@ -43,6 +43,7 @@
 #define PM_PROTOCOL_CHECKSUM_ERROR 0x02  //!< A packet read in progress failed due to a checksum error.
 #define PM_PROTOCOL_RX_TIMEOUT     0x03  //!< A packet read in progress failed due to a timeout.
 #define PM_PROTOCOL_TX_IN_PROGRESS 0x04  //!< A packet send failed due to another transmit in progress.
+#define PM_PROTOCOL_RX_CMD_INVALID 0x05  //!< A packet read could not be decoded.
 
 #define PM_MAX_PAYLOAD_BYTES 64
 
@@ -132,7 +133,31 @@ int pmProtocolInit(const pmProtocolDriver_t * driver, pmProtocolContext_t * cont
 void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context);
 
 /**
-* @brief Call to queue up a message for transmission.
+* @brief Call to queue up a payload for transmission.
+* 
+* @param tx The definition for the payload to send.
+* @param context Context variables that can be used by this module.
+* @return int #PM_PROTOCOL_SUCCESS on success. 
+*             #PM_PROTOCOL_TX_IN_PROGRESS if a transmit is already in progress.
+*             #PM_PROTOCOL_FAILURE otherwise.
+*/
+int pmProtocolSend(pmCmdPayloadDefinition_t * tx, pmProtocolContext_t * context);
+
+/**
+* @brief Call to read a payload from the receive queue.
+* 
+* @param rx The buffer to load the received payload into.
+* @param context Context variables that can be used by this module.
+* @return int #PM_PROTOCOL_SUCCESS if a message could be read.
+*             #PM_PROTOCOL_FAILURE if a message could not be read.
+*             #PM_PROTOCOL_CHECKSUM_ERROR if a message could be read but it had an invalid checksum.
+*             #PM_PROTOCOL_RX_TIMEOUT if a message was in progress but failed due to a timeout.
+*             #PM_PROTOCOL_RX_CMD_INVALID if a message was read but was formatted incorrectly.
+*/
+int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context);
+
+/**
+* @brief Call to queue up a raw packet for transmission.
 * 
 * @param tx The definition for the message to send.
 * @param context Context variables that can be used by this module.
@@ -143,13 +168,14 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context);
 int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * context);
 
 /**
-* @brief Call to read a message from the receive queue.
+* @brief Call to read a raw packet from the receive queue.
 * 
 * @param rx The buffer to load the received message into.
 * @param context Context variables that can be used by this module.
 * @return int #PM_PROTOCOL_SUCCESS if a message could be read.
 *             #PM_PROTOCOL_FAILURE if a message could not be read.
-*             #PM_PROTOCOL_TIMEOUT if a message was in progress but failed due to a timeout.
+*             #PM_PROTOCOL_CHECKSUM_ERROR if a message could be read but it had an invalid checksum.
+*             #PM_PROTOCOL_RX_TIMEOUT if a message was in progress but failed due to a timeout.
 */
 int pmProtocolReadPacket(pmProtocolRawPacket_t * rx, pmProtocolContext_t * context);
 

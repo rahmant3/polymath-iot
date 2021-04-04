@@ -25,6 +25,9 @@
 //! The maximum number of sensors assumed to be attached to the slave.
 #define PM_MAX_SENSORS_PER_CLUSTER (8u)
 
+//! Response mask.
+#define PM_PROTOCOL_RESP_MASK (0x80)
+
 // --------------------------------------------------------------------------------------------------------------------
 // ENUMS AND ENUM TYPEDEFS
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,10 +71,11 @@ typedef enum pmCommandCodes_e
 
   // 0x04-0xEF reserved.
 
-  // Note that a positive ACK is the corresponding command byte (above) OR'd with 0x80.
+  // Note that a positive ACK is the corresponding command byte (above) OR'd with 0x80. This means that 0x80 up to 0x7E
+  // is used for positive ACKs.
 
   //! These are always returned by the slave in response to the above commands.
-  PM_CMD_NEGATIVE_ACK = 0xFF
+  PM_CMD_NEGATIVE_ACK = 0x7F
 } pmCommandCodes_t;
 
 typedef enum pmStatusCodes_e
@@ -118,7 +122,7 @@ typedef struct pmCmdWriteStatus_s
 } pmCmdWriteStatus_t;
 
 //! Response structure sent by the slave in response to a command, received by the master.
-typedef struct pmCmdPacketDefinition_s
+typedef struct pmCmdPayloadDefinition_s
 {
   uint8_t commandCode; //!< One of the command codes in #pmCommandCodes_t.
   union

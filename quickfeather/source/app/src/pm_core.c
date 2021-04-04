@@ -56,7 +56,7 @@ static int pmMasterUartRx(uint8_t * data, uint8_t numBytes);
 // --------------------------------------------------------------------------------------------------------------------
 static bool g_initError = false;
 
-static pmProtocolContext_t g_pmUartMasterContext;
+/*static*/ pmProtocolContext_t g_pmUartMasterContext;
 static pmProtocolDriver_t g_pmUartMasterDriver =
 {
     .tx = pmMasterUartTx,
@@ -64,7 +64,7 @@ static pmProtocolDriver_t g_pmUartMasterDriver =
 };
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
-    static pmProtocolContext_t g_pmUartSlaveContext;
+    /*static*/ pmProtocolContext_t g_pmUartSlaveContext;
     static pmProtocolDriver_t g_pmUartSlaveDriver =
     {
         .tx = pmSlaveUartTx,
@@ -153,10 +153,6 @@ static void pmCoreRtosTask(void * params)
     TickType_t lastLedBlinkTicks = lastWakeupTicks;
     uint8_t ledOn = 1;
 
-    uint8_t rc;
-    
-    pmProtocolRawPacket_t slaveRx;
-    pmProtocolRawPacket_t masterRx;
 
     // Flush any existing bytes.
 	uint8_t dummy;
@@ -191,42 +187,8 @@ static void pmCoreRtosTask(void * params)
 
             pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
             
-            // Check for reads on the master node.
-            rc = pmProtocolReadPacket(&masterRx, &g_pmUartMasterContext);
             #ifdef ENABLE_SLAVE_LOOPBACK_TEST
-            	if (PM_PROTOCOL_RX_TIMEOUT == rc)
-				{
-					dbg_str("Error: Encountered a timeout on the MASTER node.\r\n");
-				}
-				else if (PM_PROTOCOL_CHECKSUM_ERROR == rc)
-				{
-					dbg_str("Error: Encountered a checksum error on the MASTER node.\r\n");
-				}
-				else if (PM_PROTOCOL_SUCCESS == rc)
-            	{
-            		dbg_str("Successfully obtained a packet on the MASTER node.\r\n");
-            	}
-
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
-
-                // Check for reads on the slave node.
-                rc = pmProtocolReadPacket(&slaveRx, &g_pmUartSlaveContext);
-                if (PM_PROTOCOL_RX_TIMEOUT == rc)
-                {
-                    dbg_str("Error: Encountered a timeout on the slave node.\r\n");
-                }
-                else if (PM_PROTOCOL_CHECKSUM_ERROR == rc)
-                {
-                    dbg_str("Error: Encountered a checksum error on the slave node.\r\n");
-                }
-                else if (PM_PROTOCOL_SUCCESS == rc)
-                {
-                    dbg_str("Successfully obtained a packet on the slave node. Echoing.\r\n");
-                    if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&slaveRx, &g_pmUartSlaveContext))
-                    {
-                        dbg_str("Error: Failed to transmit echoed packet.\r\n");
-                    }
-                }
             #endif
         }
 
