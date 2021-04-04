@@ -21,6 +21,14 @@
 
 #define DEBUG
 
+#ifdef DEBUG
+	//#include <Fw_global_config.h>
+	//#include <dbg_uart.h>
+	#define DEBUG_PRINTF(s) //dbg_str(s)
+#else
+	#define DEBUG_PRINTF(s)
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 // TYPEDEFS
 // --------------------------------------------------------------------------------------------------------------------
@@ -84,7 +92,7 @@ int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * conte
             {
                 checksum += context->txBuffer[index];
             }
-            context->txBuffer[ix++] = ~checksum + 1;
+            context->txBuffer[len - 1] = ~checksum + 1;
 
             rc = PM_PROTOCOL_SUCCESS;
         }
@@ -152,6 +160,7 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
                 {
                     if (context->rxBuffer[0] == START_BYTE)
                     {
+                    	DEBUG_PRINTF("Received a start byte.\r\n");
                         context->rxStartTicks = ticks_ms;
                         context->rxBytes = 1;
                         context->rxState = WAITING_FOR_LEN;
@@ -165,7 +174,8 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
                 {
                     context->rxLen = context->rxBuffer[1];
                     if (context->rxLen <= MAX_RX_BYTES)
-                    {                        
+                    {
+                    	DEBUG_PRINTF("Received a length byte.\r\n");
                         context->rxBytes = 2;
                         context->rxState = WAITING_FOR_DATA;
                     }
@@ -203,10 +213,12 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
 
                     if (checksum == 0)
                     {
+                    	DEBUG_PRINTF("Received a payload.\r\n");
                         context->rxState = PAYLOAD_READY;
                     }
                     else
                     {
+                    	DEBUG_PRINTF("Received a payload with checksum error.\r\n");
                         context->rxState = CHECKSUM_ERROR;
                     }
                 }

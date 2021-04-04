@@ -63,25 +63,67 @@ extern void qf_hardwareSetup();
 static void nvic_init(void);
 
 #if 1
+static volatile int test = 0;
+
 static void uartFpgaTestTask(void * params)
 {
     bool flit = true;
     const char * header = "Hello -- this is a UART FPGA\n";
 
-    uart_tx_buf(UART_ID_FPGA_UART1, header, strlen(header));
+    //uart_tx_buf(UART_ID_FPGA_UART1, header, strlen(header));
+
+
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
-
+/*
         int numBytes = uart_rx_available(UART_ID_FPGA_UART1);
         while (numBytes > 0)
         {
             uart_tx(UART_ID_FPGA_UART1, uart_rx(UART_ID_FPGA_UART1));
             numBytes--;
         }
-        
+  */
+        uint8_t usrBtn;
+        HAL_GPIO_Read(0, &usrBtn);
+
+        if (!usrBtn)
+        {
+#define SENDING_UART   UART_ID_FPGA_UART1
+#define RECEIVING_UART UART_ID_FPGA
+
+        	// Flush any existing bytes.
+        	uint8_t dummy;
+        	while (uart_rx_available(RECEIVING_UART) > 0)
+			{
+				uart_rx_raw_buf(RECEIVING_UART, &dummy, 1);
+			}
+
+        	static uint8_t rxbuffer[256];
+        	volatile uint8_t errorCount = 0;
+
+			for (uint16_t c = 0; c < sizeof(rxbuffer); c++)
+			{
+				uart_tx_raw(SENDING_UART, c & 0xFF);
+
+				while (uart_rx_available(RECEIVING_UART) == 0); // Block until data is available.
+
+				uart_rx_raw_buf(RECEIVING_UART, &rxbuffer[c], 1);
+			}
+
+			for (uint16_t c = 0; c < sizeof(rxbuffer); c++)
+			{
+				if (c != rxbuffer[c])
+				{
+					errorCount++;
+				}
+			}
+
+			while(1){} // Block here so that the data can be viewed in a debugger.
+        }
+
         flit = !flit;
-        HAL_GPIO_Write(5, flit);
+        //HAL_GPIO_Write(5, flit);
     }
 }
 #endif
@@ -154,10 +196,10 @@ int main(void)
 
     CLI_start_task( my_main_menu );
 
-    #if 0   
+    #if 0
     if (pdPASS == xTaskCreate(uartFpgaTestTask, "FPGA Task", 1024, NULL, (configMAX_PRIORITIES - 1), NULL))
     {
-        HAL_GPIO_Write(5, true);
+        //HAL_GPIO_Write(5, true);
     }
     #endif
 

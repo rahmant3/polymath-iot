@@ -158,18 +158,28 @@ static void pmCoreRtosTask(void * params)
     pmProtocolRawPacket_t slaveRx;
     pmProtocolRawPacket_t masterRx;
 
+    // Flush any existing bytes.
+	uint8_t dummy;
+
+	while (uart_rx_available(UART_ID_HW) > 0)
+	{
+		uart_rx_raw_buf(UART_ID_HW, &dummy, 1);
+	}
+	while (uart_rx_available(UART_ID_FPGA) > 0)
+	{
+		uart_rx_raw_buf(UART_ID_FPGA, &dummy, 1);
+	}
+	while (uart_rx_available(UART_ID_FPGA_UART1) > 0)
+	{
+		uart_rx_raw_buf(UART_ID_FPGA_UART1, &dummy, 1);
+	}
+
     while(1)
     {
         if (!g_initError)
         {
             TickType_t nowTicks = xTaskGetTickCount();
             uint32_t nowTicks_ms  = nowTicks * 1000 / configTICK_RATE_HZ;
-
-            if (testSend)
-            {
-            	pm_test_send("test");
-            	testSend = 0;
-            }
 
             if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
             {
@@ -182,7 +192,7 @@ static void pmCoreRtosTask(void * params)
             pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
             
             // Check for reads on the master node.
-            rc = pmProtocolReadPacket(&slaveRx, &g_pmUartSlaveContext);
+            rc = pmProtocolReadPacket(&masterRx, &g_pmUartMasterContext);
 
             #ifdef ENABLE_SLAVE_LOOPBACK_TEST
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
@@ -206,6 +216,18 @@ static void pmCoreRtosTask(void * params)
                     }
                 }
             #endif
+        }
+
+
+        uint8_t usrBtn;
+		HAL_GPIO_Read(0, &usrBtn);
+		if (!usrBtn)
+		{
+			if (!testSend)
+			{
+				pm_test_send("test");
+				testSend = 1;
+			}
         }
 
         vTaskDelayUntil(&lastWakeupTicks, pdMS_TO_TICKS(PM_CORE_RTOS_TASK_PERIOD_ms));
