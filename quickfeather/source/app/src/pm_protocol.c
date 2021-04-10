@@ -326,10 +326,10 @@ int pmProtocolSend(pmCmdPayloadDefinition_t * tx, pmProtocolContext_t * context)
                 uint8_t ix = 1;
                 for (uint8_t sensorIdx = 0; sensorIdx < tx->getSensors.numSensors; sensorIdx++)
                 {
-                    rawTx.bytes[ix++] = tx->getSensors.sensors[0].sensorId && 0xFF;
-                    rawTx.bytes[ix++] = (tx->getSensors.sensors[0].sensorId >> 8) && 0xFF;
-                    rawTx.bytes[ix++] = tx->getSensors.sensors[0].data && 0xFF;
-                    rawTx.bytes[ix++] = (tx->getSensors.sensors[0].data >> 8) && 0xFF;
+                    rawTx.bytes[ix++] = tx->getSensors.sensors[sensorIdx].sensorId & 0xFF;
+                    rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].sensorId >> 8) & 0xFF;
+                    rawTx.bytes[ix++] = tx->getSensors.sensors[sensorIdx].data & 0xFF;
+                    rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 8) & 0xFF;
                 }
                 rawTx.numBytes = ix;
 
@@ -440,8 +440,11 @@ int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context)
                         localRx.getSensors.numSensors = (rawRx.numBytes - 1) / 4;
                         for (uint8_t ix = 0; ix < localRx.getSensors.numSensors; ix++)
                         {
-                            localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (4 * ix)] + rawRx.bytes[2 + (4 * ix)] << 8;
-                            localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (4 * ix)] + rawRx.bytes[4 + (4 * ix)] << 8;
+                            localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (4 * ix)];
+                            localRx.getSensors.sensors[ix].sensorId += (rawRx.bytes[2 + (4 * ix)] << 8);
+
+                            localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (4 * ix)];
+                            localRx.getSensors.sensors[ix].data += (rawRx.bytes[4 + (4 * ix)] << 8);
                             
                             rc = PM_PROTOCOL_SUCCESS;
                         }   

@@ -126,7 +126,7 @@ static void pm_receive_raw(const struct cli_cmd_entry *pEntry)
 	}
 	else if (PM_PROTOCOL_SUCCESS == rc)
 	{
-		dbg_str("Successfully obtained a packet on the MASTER node.\r\n");
+		dbg_str("Successfully obtained a packet on the MASTER node: ");
 		int len = strnlen(masterRx.bytes, masterRx.numBytes);
 
 		if (len < sizeof(receive_string_buf))
@@ -170,6 +170,22 @@ static void pm_cmd_protocol(const struct cli_cmd_entry *pEntry)
 	}
 }
 
+static void pm_cmd_sensors(const struct cli_cmd_entry *pEntry)
+{
+	pmCmdPayloadDefinition_t masterTx;
+
+	masterTx.commandCode = PM_CMD_GET_SENSORS;
+	if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&masterTx, &g_pmUartMasterContext))
+	{
+		dbg_str("Successfully sent a request for the sensors on the master node.\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send a request for the sensors on the master node.\r\n");
+	}
+}
+
+
 static void pm_cmd_rx(const struct cli_cmd_entry *pEntry)
 {
 	pmCmdPayloadDefinition_t masterRx;
@@ -190,6 +206,18 @@ static void pm_cmd_rx(const struct cli_cmd_entry *pEntry)
 			case PM_CMD_WRITE_STATUS:
 				dbg_str("Receive a write status of: ");
 				dbg_int(masterRx.writeStatus.status);
+				dbg_str("\r\n");
+				break;
+			case PM_CMD_GET_SENSORS:
+				dbg_str("Received sensor data:\r\n");
+				for (int ix = 0; ix < masterRx.getSensors.numSensors; ix++)
+				{
+					dbg_str("\tSensor ID: ");
+					dbg_int(masterRx.getSensors.sensors[ix].sensorId);
+					dbg_str("\t Data: ");
+					dbg_int(masterRx.getSensors.sensors[ix].data);
+					dbg_str("\r\n");
+				}
 				dbg_str("\r\n");
 				break;
 			default:
@@ -273,6 +301,24 @@ static void pm_slave_receive_cmd(const struct cli_cmd_entry *pEntry)
 				}
 				break;
 			}
+			case PM_CMD_GET_SENSORS:
+			{
+				// Respond with some dummy data.
+				pmCmdPayloadDefinition_t slaveTx;
+				slaveTx.commandCode = slaveRx.commandCode | PM_PROTOCOL_RESP_MASK;
+				slaveTx.getSensors.numSensors = 5;
+				for (int ix = 0; ix < slaveTx.getSensors.numSensors; ix++)
+				{
+					slaveTx.getSensors.sensors[ix].sensorId = ix;
+					slaveTx.getSensors.sensors[ix].data = ix + 0x80;
+				}
+
+				if (PM_PROTOCOL_SUCCESS != pmProtocolSend(&slaveTx, &g_pmUartSlaveContext))
+				{
+					dbg_str("Error: Failed to transmit response from slave.\r\n");
+				}
+				break;
+			}
 			default:
 				dbg_str("Received unhandled command on the slave.\r\n");
 				break;
@@ -296,17 +342,18 @@ const struct cli_cmd_entry qf_diagnostic[] =
 
 const struct cli_cmd_entry pm_test[] =
 {
-    CLI_CMD_SIMPLE( "send_raw", pm_send_raw, "Send user string over the master node." ),
-	CLI_CMD_SIMPLE( "receive_raw", pm_receive_raw, "Read a user string on the master node." ),
+    CLI_CMD_SIMPLE( "m_send_raw",    pm_send_raw,    "Send user string over the master node." ),
+	CLI_CMD_SIMPLE( "m_receive_raw", pm_receive_raw, "Read a user string on the master node." ),
+	CLI_CMD_SIMPLE( "m_receive_cmd", pm_cmd_rx,      "Read a response command on the master node." ),
 
-	CLI_CMD_SIMPLE( "send_cmd_status", pm_cmd_status, "Send a status to the slave node." ),
-	CLI_CMD_SIMPLE( "send_cmd_protocol", pm_cmd_protocol, "Request protocol ID from the slave node." ),
-	//CLI_CMD_SIMPLE( "send_cmd_sensor", pm_cmd_sensors, "Request sensor data from the slave node." ),
-	CLI_CMD_SIMPLE( "receive_cmd", pm_cmd_rx, "Read a response command on the master node." ),
+	CLI_CMD_SIMPLE( "m_send_cmd_0", pm_cmd_protocol, "Request protocol ID from the slave node." ),
+	//CLI_CMD_SIMPLE( "m_send_cmd_1", pm_cmd_, "Request cluster ID from the slave node." ),
+	CLI_CMD_SIMPLE( "m_send_cmd_2", pm_cmd_sensors, "Request sensor data from the slave node." ),
+	CLI_CMD_SIMPLE( "m_send_cmd_3", pm_cmd_status, "Send a status to the slave node." ),
 
 
-	CLI_CMD_SIMPLE( "slave_receive_raw", pm_slave_receive_raw, "Read user string from the slave node." ),
-	CLI_CMD_SIMPLE( "slave_receive_cmd", pm_slave_receive_cmd, "Read command from the slave node." ),
+	CLI_CMD_SIMPLE( "s_receive_raw", pm_slave_receive_raw, "Read user string from the slave node." ),
+	CLI_CMD_SIMPLE( "s_receive_cmd", pm_slave_receive_cmd, "Read command from the slave node." ),
     CLI_CMD_TERMINATE()
 };
 
