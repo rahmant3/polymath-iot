@@ -2,13 +2,14 @@
 # Symbiflow options for QORK SDK
 #
 export RTL_TOP_MODULE=helloworldfpga
+export GATEWARE_DIR=$(APP_DIR)$(DIR_SEP)..$(DIR_SEP)fpga
 
 #
 # GCC Configuration options for QORC SDK
 #
 
 DASH_G=-gdwarf-4
-DASH_O=-Os
+DASH_O=-O
 
 #Assembler flags
 export AS_FLAGS= -mcpu=cortex-m4 -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 $(DASH_O) -fmessage-length=0 \
@@ -35,13 +36,11 @@ export MACROS=-D__FPU_USED=1 -D__FPU_USED=1 \
 
 export OPT_FLAGS=-fmerge-constants -fomit-frame-pointer -fcrossjumping -fexpensive-optimizations -ftoplevel-reorder
 export LIBCMSIS_GCC_DIR=$(PROJ_ROOT)$(DIR_SEP)Libraries$(DIR_SEP)CMSIS$(DIR_SEP)lib$(DIR_SEP)GCC
-export LIBSENSIML_DIR=$(APP_DIR)$(DIR_SEP)knowledgepack$(DIR_SEP)sensiml
 
 export INCLUDE_DIRS=-I"$(PROJ_DIR)" \
                  -I"$(APP_DIR)/inc" \
-                 -I"$(APP_DIR)/knowledgepack/inc" \
-                 -I"$(APP_DIR)/knowledgepack/sensiml/inc" \
                  -I"$(PROJ_ROOT)/s3-gateware/" \
+                 -I"${GATEWARE_DIR}/" \
                  -I"$(PROJ_ROOT)/freertos_gateware/inc" \
                  -I"$(PROJ_ROOT)/Libraries/CMSIS/inc" \
                  -I"$(PROJ_ROOT)/HAL/inc" \
@@ -55,9 +54,7 @@ export INCLUDE_DIRS=-I"$(PROJ_DIR)" \
                  -I"$(PROJ_ROOT)/BSP/quickfeather/inc" \
                  -I"$(PROJ_ROOT)/Libraries/Utils/inc" \
                  -I"$(PROJ_ROOT)/Libraries/FPGA/inc"\
-                 -I"$(PROJ_ROOT)/Libraries/DatablockManager/inc" \
-                 -I"$(PROJ_ROOT)/Tasks/DatablockProcessor/inc" \
-                 -I"$(PROJ_ROOT)/Libraries/SensorFramework/drivers/M4/mc3635"
+                 -I"$(PROJ_ROOT)/Libraries/DatablockManager/inc" 
     
 
 # C compiler flags
@@ -72,8 +69,8 @@ export LD_FLAGS_1= -mcpu=cortex-m4 -mthumb -mlittle-endian -mfloat-abi=hard -mfp
             ${DASH_G} -T "$(PROJ_DIR)/app.ld" -Xlinker --gc-sections -Wall -Werror \
 	-Wl,--fatal-warnings -Wl,-Map,"$(OUTPUT_PATH)/$(OUTPUT_FILE).map" \
             --specs=nano.specs --specs=nosys.specs -Wl,--no-wchar-size-warning \
-            -o "$(OUTPUT_PATH)/$(OUTPUT_FILE).elf" \
-    -L$(LIBCMSIS_GCC_DIR) -L$(LIBSENSIML_DIR) -lsensiml -lm -larm_cortexM4lf_math 
+            -o "$(OUTPUT_PATH)/$(OUTPUT_FILE).elf" -lm\
+    -L$(LIBCMSIS_GCC_DIR) -larm_cortexM4lf_math 
 
 
 export ELF2BIN_OPTIONS=-O binary
@@ -94,11 +91,7 @@ export SYSFLASH_DIR     = $(LIB_DIR)$(DIR_SEP)SysFlash$(DIR_SEP)src
 export UTILS_DIR        = $(LIB_DIR)$(DIR_SEP)Utils$(DIR_SEP)src
 export FPGA_DIR       		= $(LIB_DIR)$(DIR_SEP)FPGA$(DIR_SEP)src
 export CLI_DIR        		= $(LIB_DIR)$(DIR_SEP)cli$(DIR_SEP)src
-export MAIN_DIR       		= $(APP_DIR)$(DIR_SEP)src
-export MAIN_FPGA_RTL_DIR	= $(PROJ_ROOT)$(DIR_SEP)s3-gateware$(DIR_SEP)usb2serial$(DIR_SEP)rtl
-export MAIN_FPGA_SRC_DIR	= $(PROJ_ROOT)$(DIR_SEP)s3-gateware$(DIR_SEP)usb2serial$(DIR_SEP)src
-export S3GW_DRIVERS_DIR     = $(PROJ_ROOT)$(DIR_SEP)freertos_gateware$(DIR_SEP)src
-export DBP_DIR         = $(PROJ_ROOT)$(DIR_SEP)Tasks$(DIR_SEP)DatablockProcessor$(DIR_SEP)src
-export DBM_DIR        = $(LIB_DIR)$(DIR_SEP)DatablockManager$(DIR_SEP)src
-export M4_DIR           = $(LIB_DIR)$(DIR_SEP)SensorFramework$(DIR_SEP)drivers$(DIR_SEP)M4$(DIR_SEP)mc3635
-export GENERATED_DIR = $(APP_DIR)$(DIR_SEP)knowledgepack$(DIR_SEP)src
+export MAIN_DIR       	= $(APP_DIR)$(DIR_SEP)src
+#export MAIN_FPGA_RTL_DIR	= $(PROJ_ROOT)$(DIR_SEP)s3-gateware$(DIR_SEP)usb2serial$(DIR_SEP)rtl
+#export MAIN_FPGA_SRC_DIR	= $(PROJ_ROOT)$(DIR_SEP)s3-gateware$(DIR_SEP)usb2serial$(DIR_SEP)src
+export S3GW_DRIVERS_DIR = $(PROJ_ROOT)$(DIR_SEP)freertos_gateware$(DIR_SEP)src

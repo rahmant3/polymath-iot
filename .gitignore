@@ -11,6 +11,9 @@ quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.settings/language.sett
 quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.project
 quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.cproject
 
+# FPGA Toolchain
+quickfeather/source/qorc-sdk/quicklogic-fpga-toolchain
+
 # ---------------- C/C++ IGNORES -----------------------
 
 # Prerequisites

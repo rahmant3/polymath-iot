@@ -545,12 +545,13 @@ void uart_tx_raw(int uartid, int c)
         return;
 	}
 
+#if 1
     if( (c=='\n') || (c=='\r') || (c=='\b') || ( (c >= 0x20) && (c < 0x7f) ) ){
         /* all is well */
     } else {
         uart_bad_tx_char += 1;
         }
-    
+#endif
     /* if fifo is full */;
     while ((UART->UART_TFR & UART_TFR_TX_FIFO_FULL))
         ;

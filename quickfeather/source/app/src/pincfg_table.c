@@ -74,7 +74,7 @@ PadConfig pincfg_table[] =
     .ucSpeed = PAD_SLEW_RATE_SLOW,
     .ucSmtTrg = PAD_SMT_TRIG_DIS
   },
-#if 0
+  
   {  // configure SCL0
     .ucPin = PAD_0,
     .ucFunc = PAD0_FUNC_SEL_SCL_0,
@@ -96,7 +96,7 @@ PadConfig pincfg_table[] =
     .ucSpeed = PAD_SLEW_RATE_SLOW,
     .ucSmtTrg = PAD_SMT_TRIG_DIS,
   },
-#endif
+  
   // LEDS
    { // setup blue LED
     .ucPin = PAD_18,
@@ -222,18 +222,48 @@ PadConfig pincfg_table[] =
     .ucSpeed = PAD_SLEW_RATE_SLOW,
     .ucSmtTrg = PAD_SMT_TRIG_DIS,
   },
+#if (FEATURE_FPGA_UART == 1)
+    { // Pad 2 -- FPGA UART Tx
+      .ucPin = PAD_2,
+      .ucFunc = PAD2_FUNC_SEL_FBIO_2,
+      .ucCtrl = PAD_CTRL_SRC_FPGA,
+      .ucMode = PAD_MODE_INPUT_EN,
+      .ucPull = PAD_NOPULL,
+      .ucDrv = PAD_DRV_STRENGHT_4MA,
+      .ucSpeed = PAD_SLEW_RATE_SLOW,
+      .ucSmtTrg = PAD_SMT_TRIG_DIS,
+    },
+    { // Pad 13 -- FPGA UART Rx
+      .ucPin = PAD_13,
+      .ucFunc = PAD13_FUNC_SEL_FBIO_13,
+      .ucCtrl = PAD_CTRL_SRC_FPGA,
+      .ucMode = PAD_MODE_OUTPUT_EN,
+      .ucPull = PAD_NOPULL,
+      .ucDrv = PAD_DRV_STRENGHT_4MA,
+      .ucSpeed = PAD_SLEW_RATE_SLOW,
+      .ucSmtTrg = PAD_SMT_TRIG_DIS,
+    },
 
-#if (SENSOR_SSSS_RATE_DEBUG_GPIO)
-  { // setup GPIO for toggling whenever a datablock is dispatched to UART
-    .ucPin = PAD_11,
-    .ucFunc = PAD11_FUNC_SEL_GPIO_2,
-    .ucCtrl = PAD_CTRL_SRC_A0,
-    .ucMode = PAD_MODE_OUTPUT_EN,
-    .ucPull = PAD_NOPULL,
-    .ucDrv = PAD_DRV_STRENGTH_4MA,
-    .ucSpeed = PAD_SLEW_RATE_SLOW,
-    .ucSmtTrg = PAD_SMT_TRIG_DIS,
-  }
+    { // Pad 4 -- FPGA UART Tx
+      .ucPin = PAD_4,
+      .ucFunc = PAD4_FUNC_SEL_FBIO_4,
+      .ucCtrl = PAD_CTRL_SRC_FPGA,
+      .ucMode = PAD_MODE_INPUT_EN,
+      .ucPull = PAD_NOPULL,
+      .ucDrv = PAD_DRV_STRENGHT_4MA,
+      .ucSpeed = PAD_SLEW_RATE_SLOW,
+      .ucSmtTrg = PAD_SMT_TRIG_DIS,
+    },
+    { // Pad 5 -- FPGA UART Rx
+      .ucPin = PAD_5,
+      .ucFunc = PAD5_FUNC_SEL_FBIO_5,
+      .ucCtrl = PAD_CTRL_SRC_FPGA,
+      .ucMode = PAD_MODE_OUTPUT_EN,
+      .ucPull = PAD_NOPULL,
+      .ucDrv = PAD_DRV_STRENGHT_4MA,
+      .ucSpeed = PAD_SLEW_RATE_SLOW,
+      .ucSmtTrg = PAD_SMT_TRIG_DIS,
+    },
 #endif
 
 };

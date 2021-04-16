@@ -25,14 +25,15 @@
 #define FW_GLOBAL_CONFIG_H_INCLUDED
 
 #include <stdint.h>
-#include "sec_debug.h"
-
-#define CONST_FREQ (1)
 
 #define ENABLE_VOICE_SOLUTION   1
 
 #define FEATURE_CLI_DEBUG_INTERFACE  1
 #define FEATURE_CLI_FILESYSTEM       0
+
+#define S3AI_FIRMWARE_MODE_RECOGNITION   ('R')
+#define S3AI_FIRMWARE_MODE_COLLECTION    ('C')
+#define S3AI_FIRMWARE_MODE_none           0
 
 /* Select the filesystem API to use */
 #define USE_FREERTOS_FAT         1  ///< Set this to 1 to use FreeRTOS FAT filesystem (Merced default)
@@ -42,12 +43,45 @@
 /* can be used only iff the QL_XPORT_INCLUDE_HEADER is defined for Device */
 #define TST_HEADER_VERIFY (1)
 
+
+#if !defined(S3AI_FIRMWARE_MODE)
+     /* allow for commandline define for automated builds on Linux */
+/* There is not enough RAM to do both - collection & recognition, choose 1 */
+#define S3AI_FIRMWARE_MODE      S3AI_FIRMWARE_MODE_COLLECTION
+//#define S3AI_FIRMWARE_MODE   S3AI_FIRMWARE_MODE_RECOGNITION
+// #define S3AI_FIRMWARE_MODE    S3AI_FIRMWARE_MODE_none
+#endif
+
+
+#define S3AI_FIRMWARE_IS_COLLECTION   (S3AI_FIRMWARE_MODE==S3AI_FIRMWARE_MODE_COLLECTION)
+#define S3AI_FIRMWARE_IS_RECOGNITION  (S3AI_FIRMWARE_MODE==S3AI_FIRMWARE_MODE_RECOGNITION)
 /* future may have other modes? */
+
+#if S3AI_FIRMWARE_IS_COLLECTION
+#define DATA_CAPTURE_BUFFER_SIZE_K_BYTES   20
+#else
+/*
+ * In this case, Data collection is disabled
+ *
+ * Thus #define is "funny lookign" it is 3 english words.
+ * If this macro is actually used, those 3 words will cause
+ * a syntax error and code will not compile, that is the intent.
+ */
+#define DATA_CAPTURE_BUFFER_SIZE_K_BYTES  not enabled here
+#endif
+
+
+#if ( S3AI_FIRMWARE_IS_COLLECTION + S3AI_FIRMWARE_IS_RECOGNITION ) > 1
+#error "S3AI does not have enough memory to support both at the same time"
+#endif
+
 
 #define uartHandlerUpdate(id,x)
 
-#define FEATURE_FPGA_UART   0       // FPGA UART not present
-#define FEATURE_USBSERIAL   1       // USBSERIAL port is present
+#define FEATURE_FPGA_UART   1       // FPGA UART not present
+#define FEATURE_USBSERIAL   0       // USBSERIAL port is present
+
+#define USE_FPGA_UART       (FEATURE_FPGA_UART)
 
 // Options for debug output -- use to set DEBUG_UART below
 // #define UART_ID_DISABLED     0   // /dev/null */
@@ -57,20 +91,31 @@
 // #define UART_ID_BUFFER       4   // Write data to buffer
 // #define UART_ID_SEMBUF       5   // Write data to semihost and buffer
 // #define UART_ID_USBSERIAL    6   // Write data to USB serial port
-#define DEBUG_UART  UART_ID_USBSERIAL  // Write data to USB serial port
-     
+// #define UART_ID_FPGA_UART1   7   // FPGA UART 1
+
+
+#if 0
+#define DEBUG_UART        UART_ID_DISABLED    // UART used for debug prints
+
+#define PM_BLE_UART       UART_ID_FPGA_UART1      // UART used for talking to the BLE part.
+#define PM_TRAINING_UART  DEBUG_UART      // UART used for training with SensiML
+#define PM_COPRO_UART     UART_ID_HW    // UART used for talking to the slave processor.
+#else
+//#define DEBUG_UART        UART_ID_DISABLED    // UART used for debug prints
+
+#define DEBUG_UART        UART_ID_HW    // UART used for debug prints
+
+//#define PM_BLE_UART       UART_ID_HW      // UART used for talking to the BLE part.
+#define PM_BLE_UART       UART_ID_FPGA_UART1      // UART used for talking to the BLE part.
+#define PM_TRAINING_UART  DEBUG_UART      // UART used for training with SensiML
+#define PM_COPRO_UART     UART_ID_FPGA    // UART used for talking to the slave processor.
+#endif
+
 #define USE_SEMIHOSTING     0       // 1 => use semihosting, 0 => use UART_ID_HW
 
 #define SIZEOF_DBGBUFFER    2048    // Number of characters in circular debug buffer
 
-/* Select the UART ID for Simple Streaming Interface */
-//#define UART_ID_SSI             (UART_ID_HW)
-//#define UART_ID_SSI             (UART_ID_BUFFER)
-#define UART_ID_SSI  (UART_ID_USBSERIAL)
-
-// Toggle GPIO whenever a datablock buffer is dispatched to the UART
-// Datablocks are dispatched every (SENSOR_SSSS_LATENCY) ms. Default is 20ms or 50Hz
-#define SENSOR_SSSS_RATE_DEBUG_GPIO      (1)    // Set to 1 to toggle configured GPIO
+#define UART_ID_CONSOLE   DEBUG_UART
 
 #define DBG_flags_default 0 //  (DBG_FLAG_ble_cmd + DBG_FLAG_sensor_rate+DBG_FLAG_datasave_debug)
 #define DBG_FLAGS_ENABLE 1
@@ -118,7 +163,7 @@ extern int FPGA_FFE_LOADED;
 //#define FFE_DRIVERS	0 // 1
 //
 ///* do or do not perform dynamic frequency scaling */
-//#define CONST_FREQ (1)
+#define CONST_FREQ (1)
 //
 ///* enable the LTC1859 driver */
 //#define LTC1859_DRIVER  0 // 1
@@ -162,9 +207,7 @@ extern int FPGA_FFE_LOADED;
 /* stringize value */
 #define VALUE2STRING(value)    TOSTRING(value)
 #define TOSTRING(value)        #value
-#define SOURCE_LOCATION        __FILE__ ":" VALUE2STRING(__LINE__)
-
-#define UNUSED(a) (void)(a)    // Use to indicate this variable or value is unused.
+#define SOURCE_LOCATION        __FILE__":"VALUE2STRING(__LINE__)
 
 /********************/
 

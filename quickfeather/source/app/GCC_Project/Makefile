@@ -6,7 +6,7 @@ include config.mk
 
 VPATH:=$(OUTPUT_PATH)
 
-all: _makedirs_ external_srcs appdir gateware s3gw_drivers
+all: _makedirs_ external_srcs appdir s3gw_drivers
 	-${HIDE}$(RM) $(OUTPUT_PATH)$(DIR_SEP)bin$(DIR_SEP)$(OUTPUT_FILE).*
 	make -f makefiles/Makefile_output
 	-${HIDE}$(MKDIR) $(OUTPUT_PATH)$(DIR_SEP)bin
@@ -24,7 +24,7 @@ _makedirs_:
 
 
 .PHONY: external_srcs
-external_srcs: Startup HAL FreeRTOS Libraries BSP DatablockProcessor GENERATED
+external_srcs: Startup HAL FreeRTOS Libraries BSP
 	@echo "External sources built"
 
 .PHONY: appdir
@@ -82,6 +82,14 @@ clean_Libraries:
 
 CLEAN_TARGET += Libraries
 
+.PHONY:appgateware
+appgateware:
+	make --directory ${GATEWARE_DIR} all
+clean_appgateware:
+	make --directory ${GATEWARE_DIR} clean
+
+CLEAN_TARGET += appgateware
+
 .PHONY:gateware
 gateware:
 	make -f makefiles/Makefile_gateware
@@ -97,22 +105,6 @@ clean_s3gw_drivers:
 	make -f makefiles/Makefile_s3gw_drivers clean
 
 CLEAN_TARGET += s3gw_drivers
-
-.PHONY:DatablockProcessor
-DatablockProcessor:
-	make -f makefiles/Makefile_DatablockProcessor
-clean_DatablockProcessor:
-	make -f makefiles/Makefile_DatablockProcessor clean
-
-CLEAN_TARGET += DatablockProcessor
-
-.PHONY: GENERATED
-GENERATED:
-	make -f makefiles/Makefile_generated
-clean_GENERATED:
-	make -f makefiles/Makefile_generated clean
-
-CLEAN_TARGET += GENERATED
 
 DELETEME=
 DELETEME += $(wildcard $(OUTPUT_PATH)$(DIR_SEP)bin$(DIR_SEP)$(OUTPUT_FILE).*)
