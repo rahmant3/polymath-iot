@@ -353,6 +353,22 @@ static void pm_ble_send_raw(const struct cli_cmd_entry *pEntry)
 	}
 }
 
+static void pm_ble_receive_raw(const struct cli_cmd_entry *pEntry)
+{
+    char read_string_buf[64];
+
+	if (0 < pmBleUartService_nRF51.rx(read_string_buf, sizeof(read_string_buf)))
+	{
+		dbg_str("Successfully read the test string over BLE UART: ");
+		dbg_str(read_string_buf);
+		dbg_str("\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send the test string over BLE UART.\r\n");
+	}
+}
+
 
 static void pm_ble_direct(const struct cli_cmd_entry *pEntry)
 {
@@ -397,7 +413,7 @@ const struct cli_cmd_entry pm_test[] =
 const struct cli_cmd_entry pm_ble[] =
 {
     CLI_CMD_SIMPLE( "send_raw",    pm_ble_send_raw,    "Send user string over the BLE UART service." ),
-	//CLI_CMD_SIMPLE( "receive_raw", pm_ble_receive_raw, "Read a user string on the BLE UART service." ),
+	CLI_CMD_SIMPLE( "receive_raw", pm_ble_receive_raw, "Read a user string on the BLE UART service." ),
 	CLI_CMD_SIMPLE( "direct",    pm_ble_direct,    "Send and receive strings direct to the BLE peripheral." ),
     CLI_CMD_TERMINATE()
 };

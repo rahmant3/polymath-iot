@@ -11,6 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <FreeRTOS.h>
@@ -24,6 +25,8 @@
 // DEFINES
 // --------------------------------------------------------------------------------------------------------------------
 #define MAX_AT_CMD_LEN 64
+
+#define DEFAULT_AT_TIMEOUT_ms 200
 
 #define DBG_PRINT(s) dbg_str(s)
 //#define DBG_PRINT(s)
@@ -84,7 +87,7 @@ static uint16_t readline(char * buf, uint16_t bufsize, uint16_t timeout, bool mu
     }
 
     // delay if needed
-    if (timeout) vTaskDelay(1);
+    if (timeout) vTaskDelay(pdMS_TO_TICKS(1));
   }
 
   buf[replyidx] = 0;  // null term
@@ -108,7 +111,7 @@ bool waitForOK(void)
   // Use temp buffer to avoid overwrite returned result if any
   char tempbuf[BLE_BUFSIZE+1];
 
-  while ( readline(tempbuf, BLE_BUFSIZE, 100, false) ) {
+  while ( readline(tempbuf, BLE_BUFSIZE, DEFAULT_AT_TIMEOUT_ms, false) ) {
     if ( strcmp(tempbuf, "OK") == 0 ) return true;
     if ( strcmp(tempbuf, "ERROR") == 0 ) return false;
 
@@ -118,6 +121,7 @@ bool waitForOK(void)
   return false;
 }
 
+// Send a basic AT command, waiting for an OK or ERROR.
 static bool sendATCommand(const char * cmd)
 {
 	bool result = false;
@@ -134,16 +138,63 @@ static bool sendATCommand(const char * cmd)
     return result;
 }
 
+// Send an AT command, expecting an integer reply.
+static bool sendATCommandIntReply(const char * cmd, int32_t * data)
+{
+	bool result = false;
+	int len = strnlen(cmd, MAX_AT_CMD_LEN);
+    if (len == g_uartDriver->tx(cmd, len))
+    {
+    	DBG_PRINT("[nrf51] Sent the AT command: ");
+    	DBG_PRINT(cmd);
+    	DBG_PRINT("\n");
+
+    	result = waitForOK();
+    	if (result)
+    	{
+    		*data = strtol(bleBuffer, NULL, 0);
+    	}
+    }
+
+    return result;
+}
+
+// Send an AT command, expecting a string reply.
+static bool sendATCommandStrReply(const char * cmd, char * data, uint32_t numBytes)
+{
+	bool result = false;
+	int len = strnlen(cmd, MAX_AT_CMD_LEN);
+    if (len == g_uartDriver->tx(cmd, len))
+    {
+    	DBG_PRINT("[nrf51] Sent the AT command: ");
+    	DBG_PRINT(cmd);
+    	DBG_PRINT("\n");
+
+    	// Wait for a response.
+    	result = waitForOK();
+    	if (result)
+    	{
+    		strncpy(data, bleBuffer, numBytes);
+    	}
+    }
+
+    return result;
+}
+
 
 int pmBleInit_nRF51(const pmCoreUartDriver_t * driver)
 {
+	// Pre-condition.
+	// - Module is in DATA mode.
+	// - Module has echo OFF.
+
     int rc = PM_BLE_FAILURE;
     if ((NULL != driver) && (NULL != driver->tx) && (NULL != driver->rx))
     {
         g_uartDriver = driver;
 
         // Check if we are connected to the device.
-        if (sendATCommand("AT\n"))
+        if (sendATCommand("AT\n") && sendATCommand("AT+GATTCLEAR\n"))
         {
         	DBG_PRINT("[nrf51] Successfully initialized the nRF51 module.");
         	rc = PM_BLE_SUCCESS;
@@ -157,7 +208,6 @@ int pmBleInit_nRF51(const pmCoreUartDriver_t * driver)
     return rc;
 }
 
-static bool dataMode = false;
 static int pmBleUartTx_nRF51(const uint8_t * bytes, uint8_t numBytes)
 {
 	int result = 0;
@@ -175,4 +225,15 @@ static int pmBleUartTx_nRF51(const uint8_t * bytes, uint8_t numBytes)
 
 static int pmBleUartRx_nRF51(uint8_t * bytes, uint8_t numBytes)
 {
-	return 0;
+	int result = 0;
+
+	if (NULL != g_uartDriver)
+	{
+		if (sendATCommandStrReply("AT+BLEUARTRX\n", bytes, numBytes))
+		{
+			result = numBytes;
+		}
+	}
+	return result;
+}
+

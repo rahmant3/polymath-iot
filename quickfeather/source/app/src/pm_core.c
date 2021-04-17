@@ -45,19 +45,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 // FUNCTION
 // --------------------------------------------------------------------------------------------------------------------
-static int pmMasterUartTx(uint8_t * data, uint8_t numBytes);
+static int pmMasterUartTx(const uint8_t * data, uint8_t numBytes);
 static int pmMasterUartRx(uint8_t * data, uint8_t numBytes);
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
-    static int pmSlaveUartTx(uint8_t * data, uint8_t numBytes);
+    static int pmSlaveUartTx(const uint8_t * data, uint8_t numBytes);
     static int pmSlaveUartRx(uint8_t * data, uint8_t numBytes);
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
 // VARIABLES
 // --------------------------------------------------------------------------------------------------------------------
-static bool g_initError = false;
-
 static pmCoreModes_t g_currentMode = PM_MODE_STARTUP;
 
 /*static*/ pmProtocolContext_t g_pmUartMasterContext;
