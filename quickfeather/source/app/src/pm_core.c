@@ -83,9 +83,9 @@ static int pmMasterUartTx(uint8_t * data, uint8_t numBytes)
 	    uart_tx_raw_buf(PM_COPRO_UART, &data[ix], 1);
 	    vTaskDelay(1); // Delay 1 ms.
 	}
-#endif
-
+#else
 	uart_tx_raw_buf(PM_COPRO_UART, data, numBytes);
+#endif
 
     return numBytes;
 }
@@ -143,6 +143,7 @@ void pm_test_send(const char *s)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+void pm_ble_test(void);
 
 static volatile int testSend = 0;
 
@@ -169,6 +170,8 @@ static void pmCoreRtosTask(void * params)
 	{
 		uart_rx_raw_buf(UART_ID_FPGA_UART1, &dummy, 1);
 	}
+
+	//pm_ble_test();
 
     while(1)
     {
