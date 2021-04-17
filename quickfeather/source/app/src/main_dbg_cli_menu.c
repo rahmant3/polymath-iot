@@ -330,6 +330,43 @@ static void pm_slave_receive_cmd(const struct cli_cmd_entry *pEntry)
 	}
 }
 
+#include "pm_ble_nrf51.h"
+
+static void pm_ble_send_raw(const struct cli_cmd_entry *pEntry)
+{
+    char send_string_buf[64];
+    memset(send_string_buf, 0, sizeof(send_string_buf));
+
+    CLI_string_buf_getshow( "string to send ", send_string_buf, sizeof(send_string_buf) );
+
+	uint8_t len = strnlen(send_string_buf, 255);
+
+	if (len == pmBleUartService_nRF51.tx(send_string_buf, len))
+	{
+		dbg_str("Successfully sent the test string over BLE UART: ");
+		dbg_str(send_string_buf);
+		dbg_str("\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send the test string over BLE UART.\r\n");
+	}
+}
+
+
+static void pm_ble_direct(const struct cli_cmd_entry *pEntry)
+{
+	dbg_str("Switching to BLE_TEST mode. Type two 'q' characters to escape this mode.");
+
+	// Switch to BLE test mode.
+	pmSetMode(PM_MODE_TEST_BLE);
+
+	// Block until we've exited this mode.
+	do
+	{
+		vTaskDelay(100);
+	} while (pmGetMode() == PM_MODE_TEST_BLE);
+}
 
 const struct cli_cmd_entry qf_diagnostic[] =
 {
@@ -357,8 +394,17 @@ const struct cli_cmd_entry pm_test[] =
     CLI_CMD_TERMINATE()
 };
 
+const struct cli_cmd_entry pm_ble[] =
+{
+    CLI_CMD_SIMPLE( "send_raw",    pm_ble_send_raw,    "Send user string over the BLE UART service." ),
+	//CLI_CMD_SIMPLE( "receive_raw", pm_ble_receive_raw, "Read a user string on the BLE UART service." ),
+	CLI_CMD_SIMPLE( "direct",    pm_ble_direct,    "Send and receive strings direct to the BLE peripheral." ),
+    CLI_CMD_TERMINATE()
+};
+
 const struct cli_cmd_entry my_main_menu[] = {
     CLI_CMD_SUBMENU( "diag", qf_diagnostic, "QuickFeather diagnostic commands" ),
     CLI_CMD_SUBMENU( "test", pm_test, "Polymath test commands" ),
+	CLI_CMD_SUBMENU( "ble", pm_ble, "Polymath ble commands" ),
     CLI_CMD_TERMINATE()
 };

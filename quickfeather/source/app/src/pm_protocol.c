@@ -50,12 +50,11 @@ typedef enum pmProtocolRxStates_e
 // --------------------------------------------------------------------------------------------------------------------
 // VARIABLES
 // --------------------------------------------------------------------------------------------------------------------
-static pmProtocolContext_t g_pmProtocolContext;
 
 // --------------------------------------------------------------------------------------------------------------------
 // FUNCTIONS
 // --------------------------------------------------------------------------------------------------------------------
-int pmProtocolInit(const pmProtocolDriver_t * driver, pmProtocolContext_t * context)
+int pmProtocolInit(const pmCoreUartDriver_t * driver, pmProtocolContext_t * context)
 {
     int rc = PM_PROTOCOL_FAILURE;
     if (   (NULL != context) 
@@ -65,8 +64,6 @@ int pmProtocolInit(const pmProtocolDriver_t * driver, pmProtocolContext_t * cont
         && (NULL != driver->tx))
     {
         context->driver = driver;
-
-        (void)memset(&g_pmProtocolContext, 0, sizeof(g_pmProtocolContext));
 
         rc = PM_PROTOCOL_SUCCESS;
     }

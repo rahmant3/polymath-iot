@@ -10,7 +10,7 @@
 //
 /*
   // Define driver functions
-  const pmProtocolDriver_t uart0Driver = 
+  const pmCoreUartDriver_t uart0Driver = 
   {
     .tx = function name,
     .rx = function name
@@ -34,6 +34,8 @@
 
 #include "pm_protocol_defs.h"
 
+#include "pm_core_defs.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 // DEFINES
 // --------------------------------------------------------------------------------------------------------------------
@@ -56,33 +58,13 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
-* @brief Driver function defined by the user, to transmit UART bytes.
-* 
-* @param data The data bytes to send.
-* @param numBytes The number of bytes to send.
-* @return int The number of bytes sent.
-*/
-typedef int (*pmProtocolUartTxFcnPtr) (uint8_t * data, uint8_t numBytes);
-
-/**
-* @brief Driver function defined by the user, to receive UART bytes.
-* 
-* @param buffer The data buffer to load with the read bytes.
-* @param numBytes Size of the data buffer.
-* @return int The number of bytes loaded to the buffer.
-*/
-typedef int (*pmProtocolUartRxFcnPtr) (uint8_t * buffer, uint8_t numBytes);
-
-
-struct pmProtocolDriver_s; // Forward declare
-/**
 * @brief Private context variables. The user must declare a structure in static RAM for this module to use. The module
 *        takes care of initializing the RAM.
 * 
 */
 typedef struct pmProtocolContext_s
 {
-    const struct pmProtocolDriver_s * driver;
+    const pmCoreUartDriver_t * driver;
 
     bool txInProgress;
     bool txWaitingForAck;
@@ -94,16 +76,6 @@ typedef struct pmProtocolContext_s
     uint32_t rxStartTicks;
     uint8_t rxBuffer[MAX_RX_BYTES];
 } pmProtocolContext_t;
-
-/**
-* @brief Parameters that allow this module to interact with the lower level hardware.
-* 
-*/
-typedef struct pmProtocolDriver_s
-{
-  pmProtocolUartTxFcnPtr tx; //!< Function used for transmitting data over UART.
-  pmProtocolUartRxFcnPtr rx; //!< Function used for receiving data over UART.
-} pmProtocolDriver_t;
 
 
 typedef struct pmProtocolRawPacket_s
@@ -123,7 +95,7 @@ typedef struct pmProtocolRawPacket_s
 * @param context Context variables that can be used by this module.
 * @return int #PM_PROTOCOL_SUCCESS on success, #PM_PROTOCOL_FAILURE otherwise.
 */
-int pmProtocolInit(const pmProtocolDriver_t * driver, pmProtocolContext_t * context);
+int pmProtocolInit(const pmCoreUartDriver_t * driver, pmProtocolContext_t * context);
 
 /**
 * @brief This must be called periodically to allow this module to perform work.

@@ -23,9 +23,10 @@
 #include <eoss3_hal_fpga_usbserial.h>
 #include <eoss3_hal_uart.h>
 
-#include "pm_protocol.h"
+#include "pm_core.h"
 
 #include "Fw_global_config.h"
+#include "pm_protocol.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // DEFINES
@@ -35,6 +36,7 @@
 #define PM_LED_BLINK_PERIOD_ms      pdMS_TO_TICKS(1000u)
 
 #define ENABLE_SLAVE_LOOPBACK_TEST
+#define DEFAULT_MODE PM_MODE_TEST_SLAVE
 
 #define BLUE_LED_GPIO  4
 #define GREEN_LED_GPIO 5
@@ -56,8 +58,10 @@ static int pmMasterUartRx(uint8_t * data, uint8_t numBytes);
 // --------------------------------------------------------------------------------------------------------------------
 static bool g_initError = false;
 
+static pmCoreModes_t g_currentMode = PM_MODE_STARTUP;
+
 /*static*/ pmProtocolContext_t g_pmUartMasterContext;
-static pmProtocolDriver_t g_pmUartMasterDriver =
+static pmCoreUartDriver_t g_pmUartMasterDriver =
 {
     .tx = pmMasterUartTx,
     .rx = pmMasterUartRx
@@ -65,7 +69,7 @@ static pmProtocolDriver_t g_pmUartMasterDriver =
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
     /*static*/ pmProtocolContext_t g_pmUartSlaveContext;
-    static pmProtocolDriver_t g_pmUartSlaveDriver =
+    static pmCoreUartDriver_t g_pmUartSlaveDriver =
     {
         .tx = pmSlaveUartTx,
         .rx = pmSlaveUartRx
@@ -75,7 +79,7 @@ static pmProtocolDriver_t g_pmUartMasterDriver =
 // --------------------------------------------------------------------------------------------------------------------
 // FUNCTIONS
 // --------------------------------------------------------------------------------------------------------------------
-static int pmMasterUartTx(uint8_t * data, uint8_t numBytes)
+static int pmMasterUartTx(const uint8_t * data, uint8_t numBytes)
 {
 #if 0
 	for (int ix = 0; ix < numBytes; ix++)
@@ -103,7 +107,7 @@ static int pmMasterUartRx(uint8_t * data, uint8_t numBytes)
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
 // --------------------------------------------------------------------------------------------------------------------
-static int pmSlaveUartTx(uint8_t * data, uint8_t numBytes)
+static int pmSlaveUartTx(const uint8_t * data, uint8_t numBytes)
 {
     uart_tx_raw_buf(PM_BLE_UART, data, numBytes);
 
@@ -171,17 +175,67 @@ static void pmCoreRtosTask(void * params)
 		uart_rx_raw_buf(UART_ID_FPGA_UART1, &dummy, 1);
 	}
 
-	//pm_ble_test();
+	pm_ble_test();
 
+	uint8_t escCount = 0;
     while(1)
     {
-        if (!g_initError)
-        {
-            TickType_t nowTicks = xTaskGetTickCount();
-            uint32_t nowTicks_ms  = nowTicks * 1000 / configTICK_RATE_HZ;
+        TickType_t nowTicks = xTaskGetTickCount();
+        uint32_t nowTicks_ms  = nowTicks * 1000 / configTICK_RATE_HZ;
 
+    	if (g_currentMode == PM_MODE_TEST_BLE)
+    	{
+    		// Blink the blue LED.
             if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
             {
+        		HAL_GPIO_Write(GREEN_LED_GPIO, 0);
+        		HAL_GPIO_Write(RED_LED_GPIO, 0);
+
+                ledOn = (ledOn == 0) ? 1 : 0;
+                HAL_GPIO_Write(BLUE_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+
+    		uint8_t ch;
+
+    		// Pass through console characters to the BLE module.
+    		while (uart_rx_available(DEBUG_UART) > 0)
+    		{
+    			uart_rx_raw_buf(DEBUG_UART, &ch, 1);
+    			if (ch == 'q')
+    			{
+    				escCount++;
+    			}
+    			else
+    			{
+    				escCount = 0;
+    			}
+    			uart_tx_raw_buf(PM_BLE_UART, &ch, 1);
+    		}
+
+    		// Pass through BLE characters to the console.
+    		while (uart_rx_available(PM_BLE_UART) > 0)
+			{
+				uart_rx_raw_buf(PM_BLE_UART, &ch, 1);
+				uart_tx_raw_buf(DEBUG_UART, &ch, 1);
+			}
+
+    		// If the user has entered 2 'q' characters in a row, we'll exit this mode.
+    		if (escCount > 1)
+    		{
+    			g_currentMode = DEFAULT_MODE;
+    			escCount = 0;
+    		}
+    	}
+    	else if (g_currentMode == PM_MODE_TEST_SLAVE)
+        {
+    		// Blink the green LED.
+            if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
+            {
+        		HAL_GPIO_Write(BLUE_LED_GPIO, 0);
+        		HAL_GPIO_Write(RED_LED_GPIO, 0);
+
                 ledOn = (ledOn == 0) ? 1 : 0;
                 HAL_GPIO_Write(GREEN_LED_GPIO, ledOn);
 
@@ -193,40 +247,7 @@ static void pmCoreRtosTask(void * params)
             #ifdef ENABLE_SLAVE_LOOPBACK_TEST
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
             #endif
-
-			if (testSend)
-			{
-				pmProtocolRawPacket_t masterTx;
-				masterTx.numBytes = strnlen("test", PM_MAX_PAYLOAD_BYTES);
-				(void)memcpy(masterTx.bytes,"test", masterTx.numBytes);
-
-				if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&masterTx, &g_pmUartMasterContext))
-				{
-					dbg_str("Successfully sent the test string on the master node: ");
-					dbg_str("test");
-					dbg_str("\r\n");
-				}
-				else
-				{
-					dbg_str("Error: Failed to send the test string on the master node.\r\n");
-				}
-
-				testSend = 0;
-			}
         }
-
-/*
-        uint8_t usrBtn;
-		HAL_GPIO_Read(0, &usrBtn);
-		if (!usrBtn)
-		{
-			if (!testSend)
-			{
-				pm_test_send("test");
-				testSend = 1;
-			}
-        }
-*/
         vTaskDelayUntil(&lastWakeupTicks, pdMS_TO_TICKS(PM_CORE_RTOS_TASK_PERIOD_ms));
     }
 }
@@ -236,30 +257,40 @@ void pm_main()
 {
     if (PM_PROTOCOL_SUCCESS != pmProtocolInit(&g_pmUartMasterDriver, &g_pmUartMasterContext))
     {
-        g_initError = true;
+    	g_currentMode = PM_MODE_ERROR;
     }
     #ifdef ENABLE_SLAVE_LOOPBACK_TEST
         if (PM_PROTOCOL_SUCCESS != pmProtocolInit(&g_pmUartSlaveDriver, &g_pmUartSlaveContext))
         {
-            g_initError = true;
+        	g_currentMode = PM_MODE_ERROR;
         }
     #endif
 
     if (pdPASS != xTaskCreate(pmCoreRtosTask, "Polymath Task", 1024, NULL, (configMAX_PRIORITIES / 2), NULL))
     {
-        g_initError = true;
+    	g_currentMode = PM_MODE_ERROR;
     }
 
-    if (g_initError)
+    if (g_currentMode == PM_MODE_ERROR)
     {
         // Turn on the red LED.
         HAL_GPIO_Write(RED_LED_GPIO, 1);
     }
     else
     {
+    	g_currentMode = DEFAULT_MODE;
         // Turn on the green LED.
         HAL_GPIO_Write(GREEN_LED_GPIO, 1);
     }
 
+}
+
+void pmSetMode(pmCoreModes_t mode)
+{
+	g_currentMode = mode;
+}
+pmCoreModes_t pmGetMode()
+{
+	return g_currentMode;
 }
 

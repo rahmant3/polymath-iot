@@ -171,7 +171,7 @@ int main(void)
     if (device_id == 0xABCD0002)
     {
       uart_id = UART_ID_FPGA_UART1;
-      brate = BAUD_115200;
+      brate = BAUD_9600;
       uartObj.baud = brate;
       uartObj.wl = WORDLEN_8B;
       uartObj.parity = PARITY_NONE;
