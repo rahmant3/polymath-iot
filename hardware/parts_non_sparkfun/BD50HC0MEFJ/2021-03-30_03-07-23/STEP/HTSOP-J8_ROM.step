@@ -14,6 +14,7 @@ DATA;
 #7=APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2003,#10);
 #8=PRODUCT('product','part','',(#9));
 #9=PRODUCT_CONTEXT('3D Mechanical Parts',#10,'mechanical');
+#10=APPLICATION_CONTEXT('Core Data for Automotive Mechanical Design Process');
 #11=(GEOMETRIC_REPRESENTATION_CONTEXT(3) GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#12)) GLOBAL_UNIT_ASSIGNED_CONTEXT((#13,#14,#18)) REPRESENTATION_CONTEXT('ID1','3D'));
 #12=UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-005),#13,'DISTANCE_ACCURACY_VALUE','Maximum model space distance between geometric entities at asserted connectivities');
 #13=(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.));

@@ -1,0 +1,80 @@
+/*
+ * bme680_helper.h
+ *
+ *  Created on: Apr. 6, 2021
+ *      Author: hgopalsing
+ */
+
+#ifndef BME680_BME680_HELPER_H_
+#define BME680_BME680_HELPER_H_
+#include "bme680.h"
+#include "bme680_defs.h"
+
+
+
+
+int8_t user_i2c_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len);
+int8_t user_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len);
+
+void user_delay_ms(uint32_t period);
+
+typedef enum
+{
+	BME_I2C1,
+	//I2C2,
+
+	Number_of_interface,
+}interface_to_use;
+
+
+typedef struct {
+	struct bme680_dev dev;
+	uint8_t settings;
+} bme_params;
+
+
+// To be used with the bme_init_array when initializing the bme680 set sensor settings
+// e.g -->  bme680_set_sensor_settings(bme_init_array[I2C].settings,bme_init_array[I2C].dev);
+
+bme_params bme_init_array[Number_of_interface] =
+{
+		[BME_I2C1]= {
+				.dev.dev_id = BME680_I2C_ADDR_PRIMARY,
+				.dev.intf = BME680_I2C_INTF,
+				.dev.read = user_i2c_read,
+				.dev.delay_ms = user_delay_ms,
+				.dev.write = user_i2c_write,
+				.dev.amb_temp = 25,
+
+				/* Set the temperature, pressure and humidity settings */
+				.dev.tph_sett.os_hum = BME680_OS_2X,
+				.dev.tph_sett.os_pres = BME680_OS_4X,
+				.dev.tph_sett.os_temp = BME680_OS_8X,
+				.dev.tph_sett.filter = BME680_FILTER_SIZE_3,
+
+				/* Set the remaining gas sensor settings and link the heating profile */
+				.dev.gas_sett.run_gas = BME680_ENABLE_GAS_MEAS,
+
+			    /* Create a ramp heat waveform in 3 steps */
+				.dev.gas_sett.heatr_temp = 320, /* degree Celsius */
+				.dev.gas_sett.heatr_dur = 150, /* milliseconds */
+				.dev.power_mode = BME680_FORCED_MODE,
+
+				.settings = BME680_OST_SEL | BME680_OSP_SEL | BME680_OSH_SEL | BME680_FILTER_SEL
+		        | BME680_GAS_SENSOR_SEL,
+		},
+
+		/*[SPI] = {
+				.dev_id = BME680_SPI_INTF,
+				.intf = BME680_SPI_INTF,
+				.read = user_spi_read,
+				.write = user_spi_write,
+				.delay_ms = user_delay_ms,
+				.amb_temp = 25
+		}*/
+};
+
+
+
+
+#endif /* BME680_BME680_HELPER_H_ */
