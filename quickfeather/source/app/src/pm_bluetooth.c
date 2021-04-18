@@ -8,6 +8,42 @@
 #include <eoss3_hal_gpio.h>
 #include <eoss3_hal_uart.h>
 
+
+#include "pm_ble_nrf51.h"
+
+//! Service UUID used for the Polymath AIR cluster parameters. Note that the third and fourth bytes should not
+//! conflict with the characteristic UUIDs used.
+#define PM_AIR_CLUSTER_SERVICE_UUID "03-FA-FF-00-05-D5-4F-8D-B6-C7-17-9E-FC-E9-49-4D"
+
+#define PM_AIR_CLUSTER_PRESSURE_UUID    "0x0001"
+#define PM_AIR_CLUSTER_TEMPERATURE_UUID "0x0002"
+#define PM_AIR_CLUSTER_HUMIDITY_UUID    "0x0003"
+#define PM_AIR_CLUSTER_CO_UUID          "0x0004" //!< CO concentration.
+#define PM_AIR_CLUSTER_CO2_UUID         "0x0005" //!< CO2 concentration.
+#define PM_AIR_CLUSTER_ERO_UUID         "0x0006" //!< Estimated Room Occupancy.
+#define PM_AIR_CLUSTER_EAQ_UUID         "0x0007" //!< Estimated Air Quality.
+
+#define PM_AIR_CLUSTER_PRESSURE_IDX    0
+#define PM_AIR_CLUSTER_TEMPERATURE_IDX 1
+#define PM_AIR_CLUSTER_HUMIDITY_IDX    2
+#define PM_AIR_CLUSTER_CO_IDX          3
+#define PM_AIR_CLUSTER_CO2_IDX         4
+#define PM_AIR_CLUSTER_ERO_IDX         5
+#define PM_AIR_CLUSTER_EAQ_IDX         6
+
+pmBleCharacteristic_t pmAirClusterChars[] =
+{
+	[PM_AIR_CLUSTER_PRESSURE_IDX]    = {.uuid = PM_AIR_CLUSTER_PRESSURE_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_TEMPERATURE_IDX] = {.uuid = PM_AIR_CLUSTER_TEMPERATURE_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_HUMIDITY_IDX]    = {.uuid = PM_AIR_CLUSTER_HUMIDITY_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_CO_IDX]          = {.uuid = PM_AIR_CLUSTER_CO_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_CO2_IDX]         = {.uuid = PM_AIR_CLUSTER_CO2_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_ERO_IDX]         = {.uuid = PM_AIR_CLUSTER_ERO_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_EAQ_IDX]         = {.uuid = PM_AIR_CLUSTER_EAQ_UUID, .properties = PM_BLE_PROPERTY_READ },
+};
+
+const uint16_t numAirClusterEntries = sizeof(pmAirClusterChars) / sizeof(pmAirClusterChars[0]);
+
 #if 0
 BGLIB_DEFINE();
 
@@ -58,18 +94,17 @@ void pm_ble_test()
 
 #endif
 
-#include "pm_ble_nrf51.h"
 
-static int pmBleUartTx(uint8_t * data, uint8_t numBytes);
+static int pmBleUartTx(const uint8_t * data, uint8_t numBytes);
 static int pmBleUartRx(uint8_t * data, uint8_t numBytes);
 
-static int pmBleUartTx(uint8_t * data, uint8_t numBytes)
+static int pmBleUartTx(const uint8_t * data, uint8_t numBytes)
 {
 #if 1
 	for (int ix = 0; ix < numBytes; ix++)
 	{
 	    uart_tx_raw_buf(PM_BLE_UART, &data[ix], 1);
-	    vTaskDelay(1); // Delay 1 ms.
+	    vTaskDelay(10); // Delay 10 ms per byte.
 	}
 #else
 	uart_tx_raw_buf(PM_BLE_UART, data, numBytes);
@@ -100,10 +135,29 @@ static pmCoreUartDriver_t g_pmUartBleDriver =
 #define GREEN_LED_GPIO 5
 #define RED_LED_GPIO   6
 
-void pm_ble_test()
+void pm_ble_init()
 {
 	if (PM_BLE_SUCCESS == pmBleInit_nRF51(&g_pmUartBleDriver))
 	{
 		HAL_GPIO_Write(BLUE_LED_GPIO, 1);
+	}
+}
+
+bool pm_ble_pair()
+{
+	bool result = false;
+	if (PM_BLE_SUCCESS == pmBleDriver_nRF51.registerService(PM_AIR_CLUSTER_SERVICE_UUID, pmAirClusterChars, numAirClusterEntries))
+	{
+		result = true;
+	}
+
+	return result;
+}
+
+void pm_ble_test_update_char(uint16_t idx, pmBleDataType_t data)
+{
+	if (idx < numAirClusterEntries)
+	{
+		pmBleDriver_nRF51.writeChar(pmAirClusterChars[idx].handle, data);
 	}
 }

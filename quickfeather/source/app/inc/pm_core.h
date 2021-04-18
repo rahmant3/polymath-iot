@@ -24,11 +24,16 @@
 
 typedef enum pmCoreModes_e
 {
-	PM_MODE_STARTUP,
-	PM_MODE_NORMAL,
-	PM_MODE_TEST_SLAVE,
-	PM_MODE_TEST_BLE,
-	PM_MODE_ERROR
+	PM_MODE_STARTUP, //!< Currently starting up.
+
+	PM_MODE_TEST_SLAVE, //!< In slave test mode.
+	PM_MODE_TEST_BLE,   //!< In BLE test mode.
+
+	PM_MODE_WAITING, //!< Waiting for a cluster to be connected.
+	PM_MODE_PAIRING, //!< Pairing with a connected cluster.
+	PM_MODE_NORMAL,  //!< Normal operating mode.
+
+	PM_MODE_ERROR //!< In an error mode.
 } pmCoreModes_t;
 
 void pm_main(void);

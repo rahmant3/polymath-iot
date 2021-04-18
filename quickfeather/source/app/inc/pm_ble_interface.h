@@ -22,35 +22,38 @@
 #define PM_BLE_SUCCESS 0x00 //!< Function return code on success.
 #define PM_BLE_FAILURE 0x01 //!< Function return code on failure.
 
+#define PM_BLE_PROPERTY_READ          0x02u
+#define PM_BLE_PROPERTY_WRITE_NO_RESP 0x04u
+#define PM_BLE_PROPERTY_WRITE         0x08u
+#define PM_BLE_PROPERTY_NOTIFY        0x10u
+#define PM_BLE_PROPERTY_INDICATE      0x20u
+
 // --------------------------------------------------------------------------------------------------------------------
 // TYPEDEFS
 // --------------------------------------------------------------------------------------------------------------------
-typedef struct pmBleCharDefinition_s
-{
-  uint8_t properties;
 
-  uint8_t minLen;
-  uint8_t maxLen;
-} pmBleCharDefinition_t;
 
+typedef uint32_t pmBleDataType_t;
 typedef uint16_t pmBleHandle_t;
 
-typedef pmBleHandle_t (*pmBleAddServiceFcnPtr) (uint16_t uuid);
+typedef struct pmBleCharacteristic_s
+{
+	const char * uuid;   //!< String UUID (either 2-byte or 16-byte UUID).
+	const uint8_t properties;  //!< 8-bit property field (0x02 = Read, 0x04 = Write Without Response, 0x08 = Write, 0x10 = Notify, 0x20 = Indicate).
 
-typedef pmBleHandle_t (*pmBleAddServiceFcnPtr_128) (uint8_t uuid[16]);
+	pmBleHandle_t handle; //!< RAM so that a handle can be allocated for the characteristic.
+} pmBleCharacteristic_t;
 
-typedef pmBleHandle_t (*pmBleAddCharFcnPtr) (uint16_t uuid, pmBleHandle_t service, pmBleCharDefinition_t * definition);
+typedef int (*pmBleRegisterServiceFcnPtr) (const char * uuid, pmBleCharacteristic_t * characteristics, uint16_t listLength);
 
-typedef int (*pmBleWriteCharFcnPtr) (uint16_t uuid, pmBleHandle_t service, void * data, uint16_t numBytes);
+typedef int (*pmBleWriteCharFcnPtr) (pmBleHandle_t characteristic, pmBleDataType_t data);
 
-typedef int (*pmBleReadCharFcnPtr) (uint16_t uuid, pmBleHandle_t service, void * data, uint16_t numBytes);
+typedef int (*pmBleReadCharFcnPtr) (pmBleHandle_t characteristic, pmBleDataType_t * data);
 
 typedef struct pmBleDriver_s
 {
-    pmBleAddServiceFcnPtr addService;
-    pmBleAddServiceFcnPtr_128 addServic_128;
+	pmBleRegisterServiceFcnPtr registerService;
 
-    pmBleAddCharFcnPtr addChar;
     pmBleWriteCharFcnPtr writeChar;
     pmBleReadCharFcnPtr readChar;
 } pmBleDriver_t;

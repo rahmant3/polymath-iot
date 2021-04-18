@@ -145,7 +145,8 @@ void pm_test_send(const char *s)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-void pm_ble_test(void);
+void pm_ble_init(void);
+bool pm_ble_pair(void);
 
 static volatile int testSend = 0;
 
@@ -173,7 +174,7 @@ static void pmCoreRtosTask(void * params)
 		uart_rx_raw_buf(UART_ID_FPGA_UART1, &dummy, 1);
 	}
 
-	pm_ble_test();
+	pm_ble_init();
 
 	uint8_t escCount = 0;
     while(1)
@@ -201,7 +202,7 @@ static void pmCoreRtosTask(void * params)
     		while (uart_rx_available(DEBUG_UART) > 0)
     		{
     			uart_rx_raw_buf(DEBUG_UART, &ch, 1);
-    			if (ch == 'q')
+    			if (ch == '\n')
     			{
     				escCount++;
     			}
@@ -246,6 +247,48 @@ static void pmCoreRtosTask(void * params)
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
             #endif
         }
+    	else if (g_currentMode == PM_MODE_PAIRING)
+    	{
+    		HAL_GPIO_Write(GREEN_LED_GPIO, 0);
+    		HAL_GPIO_Write(RED_LED_GPIO, 0);
+            HAL_GPIO_Write(BLUE_LED_GPIO, 0);
+
+    		if (pm_ble_pair())
+    		{
+    			g_currentMode = PM_MODE_NORMAL;
+    		}
+    		else
+    		{
+    			g_currentMode = PM_MODE_ERROR;
+    		}
+    	}
+    	else if (g_currentMode == PM_MODE_NORMAL)
+    	{
+    		// Blink the white LED.
+            if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
+            {
+                ledOn = (ledOn == 0) ? 1 : 0;
+                HAL_GPIO_Write(GREEN_LED_GPIO, ledOn);
+        		HAL_GPIO_Write(BLUE_LED_GPIO, ledOn);
+        		HAL_GPIO_Write(RED_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+    	}
+    	else if (g_currentMode == PM_MODE_ERROR)
+    	{
+    		// Blink the red LED.
+            if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
+            {
+                HAL_GPIO_Write(GREEN_LED_GPIO, 0);
+        		HAL_GPIO_Write(BLUE_LED_GPIO, 0);
+
+                ledOn = (ledOn == 0) ? 1 : 0;
+        		HAL_GPIO_Write(RED_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+    	}
         vTaskDelayUntil(&lastWakeupTicks, pdMS_TO_TICKS(PM_CORE_RTOS_TASK_PERIOD_ms));
     }
 }

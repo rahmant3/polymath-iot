@@ -37,6 +37,11 @@ int pmBleInit_nRF51(const pmCoreUartDriver_t * driver);
 // --------------------------------------------------------------------------------------------------------------------
 // EXTERNS
 // --------------------------------------------------------------------------------------------------------------------
+
+//! Bluetooth driver functions for the nRF51 board.
+extern const pmBleDriver_t pmBleDriver_nRF51;
+
+//! UART driver which can be used to talk over the UART BLE Service on the nRF51.
 extern const pmCoreUartDriver_t pmBleUartService_nRF51;
 
 
