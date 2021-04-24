@@ -221,19 +221,61 @@ int pmBleInit_nRF51(const pmCoreUartDriver_t * driver)
     {
         g_uartDriver = driver;
 
-        // Check if we are connected to the device.
-        if (sendATCommand("AT\n") && sendATCommand("AT+GATTCLEAR\n"))
+        rc = PM_BLE_SUCCESS;
+
+        // Try twice in case there is garbage in the serial buffer the first time.
+        if (!sendATCommand("AT\n") && !sendATCommand("AT\n"))
         {
-        	DBG_PRINT("[nrf51] Successfully initialized the nRF51 module.");
-        	rc = PM_BLE_SUCCESS;
+        	// Try sending a mode switch command in case we were stuck in UART mode.
+        	if (!sendATCommand("+++\n"))
+        	{
+				rc = PM_BLE_FAILURE;
+				g_uartDriver = NULL;
+        	}
         }
-        else
+
+        if (PM_BLE_SUCCESS == rc)
         {
-        	g_uartDriver = NULL;
+			// Check if we are connected to the device.
+			if (sendATCommand("AT\n") && sendATCommand("AT+GATTCLEAR\n"))
+			{
+				DBG_PRINT("[nrf51] Successfully initialized the nRF51 module.\n");
+			}
+			else
+			{
+				rc = PM_BLE_FAILURE;
+				g_uartDriver = NULL;
+			}
         }
     }
 
     return rc;
+}
+
+static bool g_inCommandMode = true;
+bool pmBleSwitchModes_nRF51()
+{
+	bool result = false;
+
+	if (NULL != g_uartDriver)
+	{
+		if (sendATCommand("+++\n"))
+		{
+			g_inCommandMode = !g_inCommandMode;
+
+			if (g_inCommandMode)
+			{
+				DBG_PRINT("[nrf51] Switched to command mode.\n");
+			}
+			else
+			{
+				DBG_PRINT("[nrf51] Switched to UART mode.\n");
+			}
+
+			result = true;
+		}
+	}
+	return result;
 }
 
 static int pmBleUartTx_nRF51(const uint8_t * bytes, uint8_t numBytes)
@@ -241,10 +283,17 @@ static int pmBleUartTx_nRF51(const uint8_t * bytes, uint8_t numBytes)
 	int result = 0;
 	if (NULL != g_uartDriver)
 	{
-		(void)snprintf(g_txBuffer, sizeof(g_txBuffer), "AT+BLEUARTTX=%s\n", bytes);
-		if (sendATCommand(g_txBuffer))
+		if (g_inCommandMode)
 		{
-			result = numBytes;
+			(void)snprintf(g_txBuffer, sizeof(g_txBuffer), "AT+BLEUARTTX=%s\n", bytes);
+			if (sendATCommand(g_txBuffer))
+			{
+				result = numBytes;
+			}
+		}
+		else
+		{
+			result = g_uartDriver->tx(bytes, numBytes);
 		}
 	}
 
@@ -257,9 +306,16 @@ static int pmBleUartRx_nRF51(uint8_t * bytes, uint8_t numBytes)
 
 	if (NULL != g_uartDriver)
 	{
-		if (sendATCommandStrReply("AT+BLEUARTRX\n", bytes, numBytes) && (bytes[0] != '\0'))
+		if (g_inCommandMode)
 		{
-			result = numBytes;
+			if (sendATCommandStrReply("AT+BLEUARTRX\n", bytes, numBytes) && (bytes[0] != '\0'))
+			{
+				result = numBytes;
+			}
+		}
+		else
+		{
+			result = g_uartDriver->rx(bytes, numBytes);
 		}
 	}
 	return result;

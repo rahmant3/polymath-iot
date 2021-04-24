@@ -34,6 +34,14 @@
 */
 int pmBleInit_nRF51(const pmCoreUartDriver_t * driver);
 
+/**
+* @brief Switch from command mode to UART mode. This allows all UART characters to be transmitted when using the
+* pmBleUartService_nRF51 driver, rather than a subset.
+*
+* @return bool True on success, false otherwise.
+*/
+bool pmBleSwitchModes_nRF51(void);
+
 // --------------------------------------------------------------------------------------------------------------------
 // EXTERNS
 // --------------------------------------------------------------------------------------------------------------------

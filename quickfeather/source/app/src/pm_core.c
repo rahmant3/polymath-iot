@@ -35,8 +35,8 @@
 #define PM_CORE_RTOS_TASK_PERIOD_ms (5u)
 
 #define PM_LED_BLINK_PERIOD_ms      (1000u)
-//#define PM_TRAINING_PERIOD_ms       (1000u) //!< 1 Hz
-#define PM_TRAINING_PERIOD_ms       (100u) //!< 10 Hz
+#define PM_TRAINING_PERIOD_ms       (1000u) //!< 1 Hz
+//#define PM_TRAINING_PERIOD_ms       (100u) //!< 10 Hz
 
 #define ENABLE_SLAVE_LOOPBACK_TEST
 #define DEFAULT_MODE PM_MODE_TEST_SLAVE
@@ -316,6 +316,20 @@ static void pmCoreRtosTask(void * params)
 		uart_rx_raw_buf(UART_ID_FPGA_UART1, &dummy, 1);
 	}
 
+	// Used for training.
+    const char * connectString = "connect";
+    const int connectLen = sizeof(connectString) - 1;
+    const char * jsonString =  "{\"sample_rate\":1,"
+    		   	   	   	   	   "\"samples_per_packet\":3,"
+							   "\"column_location\":{"
+    						   "  \"Temperature\":0,"
+    						   "  \"Humidity\":1,"
+    						   "  \"Pressure\":2"
+    		   	   	   	   	   "}"
+    						   "}\r\n" ;
+
+    int jsonLen = strlen(jsonString);
+
 	pm_ble_init();
 
 	uint8_t escCount = 0;
@@ -384,39 +398,29 @@ static void pmCoreRtosTask(void * params)
             pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
             pmCoreReadSensorData(&sensorData);
 
-            const char * connectString = "connect";
-            const int connectLen = sizeof(connectString) - 1;
-            const char * jsonString = \
-            		"{"\
-            		   "\"sample_rate\":1,"\
-            		   "\"samples_per_packet\":3,"\
-            		   "\"column_location\":{"\
-            			"  \"Temperature\":0,"\
-            			"  \"Humidity\":1,"\
-            			"  \"Pressure\":2"\
-            		   "}"\
-            		"}\r\n" ;
-            const int jsonLen = sizeof(jsonString) - 1;
-
-            char buffer[128];
+            char buffer[512];
 
             static bool ssi_connected = false;
             if ((nowTicks - lastTrainingTicks) > pdMS_TO_TICKS(PM_TRAINING_PERIOD_ms))
             {
             	if (!ssi_connected)
             	{
-            		if (connectLen == pmBleUartService_nRF51.rx(buffer, connectLen))
+            		if (connectLen <= pmBleUartService_nRF51.rx(buffer, connectLen))
             		{
             			ssi_connected = true;
             		}
             		else
             		{
+            			sprintf(buffer, "[pm_core] Sending json with len %d.\r\n", jsonLen);
+            			dbg_str(buffer);
+            			dbg_str(jsonString);
+            			dbg_str("\n");
             			pmBleUartService_nRF51.tx(jsonString, jsonLen);
             		}
             	}
             	else
             	{
-            		sprintf(buffer, "%d\\,%d\\,%d", sensorData.sensors[0].data,sensorData.sensors[1].data, sensorData.sensors[2].data);
+            		sprintf(buffer, "%d,%d,%d", sensorData.sensors[0].data,sensorData.sensors[1].data, sensorData.sensors[2].data);
             		pmBleUartService_nRF51.tx(buffer, strlen(buffer));
             	}
             }
@@ -498,7 +502,7 @@ void pm_main()
         }
     #endif
 
-    if (pdPASS != xTaskCreate(pmCoreRtosTask, "Polymath Task", 1024, NULL, (configMAX_PRIORITIES / 2) + 1, NULL))
+    if (pdPASS != xTaskCreate(pmCoreRtosTask, "Polymath Task", 2048, NULL, (configMAX_PRIORITIES / 2) + 1, NULL))
     {
     	g_currentMode = PM_MODE_ERROR;
     }
