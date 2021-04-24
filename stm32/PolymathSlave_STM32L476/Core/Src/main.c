@@ -27,6 +27,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#include "bme680_helper.h"
 #include "pm_protocol.h"
 #include "sensor_config.h"
 /* USER CODE END Includes */
@@ -131,6 +132,11 @@ int main(void)
 	if (PM_PROTOCOL_SUCCESS
 			!= pmProtocolInit(&slave_uart_drivers, &slave_uart)) {
 		debug("Error! PM protocol initialized failed\n");
+	}
+
+	if (BME680_OK != bme680_initialize(&bme_init_array[BME_I2C1]))
+	{
+		debug("Error! BME680 initialized failed\r\n");
 	}
   /* USER CODE END 2 */
 

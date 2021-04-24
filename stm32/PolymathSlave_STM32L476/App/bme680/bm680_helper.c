@@ -35,7 +35,7 @@ static struct bme680_field_data data;
 // To be used with the bme_init_array when initializing the bme680 set sensor settings
 // e.g -->  bme680_set_sensor_settings(bme_init_array[I2C].settings,bme_init_array[I2C].dev);
 // --------------------------------------------------------------------------------------------------------------------
-static bme_params bme_init_array[Number_of_interface] =
+bme_params bme_init_array[Number_of_interface] =
 {
 		[BME_I2C1]=
 		{
@@ -88,26 +88,25 @@ int8_t user_i2c_read(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16
 	{
 		if (HAL_I2C_Master_Receive(&hi2c1, receive_device_address, reg_data, len, 100) == HAL_OK)
 		{
-			return 1;
+			return 0;
 		}
 	}
 
-	return 0;
+	return 1;
 }
 
+uint8_t buffer[256];
 int8_t user_i2c_write(uint8_t dev_id, uint8_t reg_addr, uint8_t *reg_data, uint16_t len)
 {
 	uint8_t transmit_device_address =  (dev_id << 1);
-
-	if ((HAL_I2C_Master_Transmit(&hi2c1, transmit_device_address, &reg_addr, 1, 100) == HAL_OK))
+	buffer[0] = reg_addr;
+	(void)memcpy(&buffer[1], reg_data, len);
+	if (HAL_I2C_Master_Transmit(&hi2c1, transmit_device_address, buffer, len + 1, 100) == HAL_OK)
 	{
-		if (HAL_I2C_Master_Transmit(&hi2c1, transmit_device_address, reg_data, len, 100) == HAL_OK)
-		{
-			return 1;
-		}
+		return 0;
 	}
 
-	return 0;
+	return 1;
 };
 
 
@@ -142,22 +141,17 @@ int8_t bme680_initialize(bme_params * params){
 	 uint16_t meas_period;
 	 int8_t result = BME680_E_COM_FAIL;
 
-	 result = bme680_set_sensor_settings(bme_init_array[slot].settings,&(bme_init_array[slot].dev));
+	 bme680_get_profile_dur(&meas_period, &(bme_init_array[slot].dev));
+	 user_delay_ms(meas_period);
+	 result = bme680_get_sensor_data(&data,&(bme_init_array[slot].dev));
+
 	 if (result == BME680_OK)
 	 {
 		 result = bme680_set_sensor_mode(&(bme_init_array[slot].dev));
-		 if (result == BME680_OK)
-		 {
-			 bme680_get_profile_dur(&meas_period, &(bme_init_array[slot].dev));
-			 user_delay_ms(meas_period);
-			 result = bme680_get_sensor_data(&data,&(bme_init_array[slot].dev));
-			 //result = bme680_set_sensor_mode(&(bme_init_array[slot].dev));
-		 }
 	 }
+
 	 return result;
  }
-
- // is the size suppose to indicate what type of return we expect?
 
  // --------------------------------------------------------------------------------------------------------------------
  //
