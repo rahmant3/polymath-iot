@@ -28,6 +28,7 @@ typedef enum pmCoreModes_e
 
 	PM_MODE_TEST_SLAVE, //!< In slave test mode.
 	PM_MODE_TEST_BLE,   //!< In BLE test mode.
+	PM_MODE_TEST_TRAINING, //!< In training mode.
 
 	PM_MODE_WAITING, //!< Waiting for a cluster to be connected.
 	PM_MODE_PAIRING, //!< Pairing with a connected cluster.

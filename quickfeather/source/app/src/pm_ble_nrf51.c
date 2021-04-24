@@ -257,7 +257,7 @@ static int pmBleUartRx_nRF51(uint8_t * bytes, uint8_t numBytes)
 
 	if (NULL != g_uartDriver)
 	{
-		if (sendATCommandStrReply("AT+BLEUARTRX\n", bytes, numBytes))
+		if (sendATCommandStrReply("AT+BLEUARTRX\n", bytes, numBytes) && (bytes[0] != '\0'))
 		{
 			result = numBytes;
 		}

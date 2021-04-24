@@ -62,7 +62,7 @@ const char *SOFTWARE_VERSION_STR;
 extern void qf_hardwareSetup();
 static void nvic_init(void);
 
-#if 1
+#if 0
 static volatile int test = 0;
 
 static void uartFpgaTestTask(void * params)
@@ -70,20 +70,20 @@ static void uartFpgaTestTask(void * params)
     bool flit = true;
     const char * header = "Hello -- this is a UART FPGA\n";
 
-    //uart_tx_buf(UART_ID_FPGA_UART1, header, strlen(header));
+    uart_tx_buf(UART_ID_FPGA, header, strlen(header));
 
 
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
-/*
-        int numBytes = uart_rx_available(UART_ID_FPGA_UART1);
+
+        int numBytes = uart_rx_available(UART_ID_FPGA);
         while (numBytes > 0)
         {
-            uart_tx(UART_ID_FPGA_UART1, uart_rx(UART_ID_FPGA_UART1));
+            uart_tx(UART_ID_FPGA, uart_rx(UART_ID_FPGA));
             numBytes--;
         }
-  */
+
         uint8_t usrBtn;
         HAL_GPIO_Read(0, &usrBtn);
 
@@ -185,6 +185,7 @@ int main(void)
     }
 #endif
 
+#if 1
     dbg_str("\n\n");
     dbg_str( "##########################\n");
     dbg_str( "Polymath IoT Application\n");
@@ -193,6 +194,7 @@ int main(void)
     dbg_str( "\n" );
     dbg_str( __DATE__ " " __TIME__ "\n" );
     dbg_str( "##########################\n\n");
+#endif
 
     CLI_start_task( my_main_menu );
 

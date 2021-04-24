@@ -384,6 +384,20 @@ static void pm_ble_direct(const struct cli_cmd_entry *pEntry)
 	} while (pmGetMode() == PM_MODE_TEST_BLE);
 }
 
+static void pm_test_training(const struct cli_cmd_entry *pEntry)
+{
+	dbg_str("Switching to TRAINING_TEST mode. Power must be cycled to escape this mode.\n");
+
+	// Switch to BLE test mode.
+	pmSetMode(PM_MODE_TEST_TRAINING);
+
+	// Block until we've exited this mode.
+	do
+	{
+		vTaskDelay(100);
+	} while (pmGetMode() == PM_MODE_TEST_TRAINING);
+}
+
 static void pm_ble_register(const struct cli_cmd_entry *pEntry)
 {
 	dbg_str("Switching to pairing mode to force cluster configuration.\n\n");
@@ -437,6 +451,7 @@ const struct cli_cmd_entry pm_test[] =
 
 	CLI_CMD_SIMPLE( "s_receive_raw", pm_slave_receive_raw, "Read user string from the slave node." ),
 	CLI_CMD_SIMPLE( "s_receive_cmd", pm_slave_receive_cmd, "Read command from the slave node." ),
+
     CLI_CMD_TERMINATE()
 };
 
@@ -444,9 +459,13 @@ const struct cli_cmd_entry pm_ble[] =
 {
     CLI_CMD_SIMPLE( "send_raw",    pm_ble_send_raw,    "Send user string over the BLE UART service." ),
 	CLI_CMD_SIMPLE( "receive_raw", pm_ble_receive_raw, "Read a user string on the BLE UART service." ),
+	CLI_CMD_SIMPLE( "set_char",  pm_ble_set_char,  "Update the given characteristic index with a random value." ),
+
 	CLI_CMD_SIMPLE( "direct",    pm_ble_direct,    "Send and receive strings direct to the BLE peripheral." ),
 	CLI_CMD_SIMPLE( "register",  pm_ble_register,  "Force register service and characteristic UUIDs." ),
-	CLI_CMD_SIMPLE( "set_char",  pm_ble_set_char,  "Update the given characteristic index with a random value." ),
+
+	CLI_CMD_SIMPLE( "training", pm_test_training, "Switch to training mode." ),
+
     CLI_CMD_TERMINATE()
 };
 
