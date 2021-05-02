@@ -1,0 +1,216 @@
+# Created by Ultra Librarian Gold 8.3.283 Copyright © 1999-2018
+# Frank Frank, Accelerated Designs
+
+Grid mil;
+Set Wire_Bend 2;
+
+
+Edit 'CONN20_104074_28P7X11P18_TEC.pac';
+Change Drill 22;
+Pad '1' Long 0 35 R90 (0 0);
+Change Drill 22;
+Pad '2' Long 0 35 R90 (50 0);
+Change Drill 22;
+Pad '3' Long 0 35 R90 (100 0);
+Change Drill 22;
+Pad '4' Long 0 35 R90 (150 0);
+Change Drill 22;
+Pad '5' Long 0 35 R90 (200 0);
+Change Drill 22;
+Pad '6' Long 0 35 R90 (250 0);
+Change Drill 22;
+Pad '7' Long 0 35 R90 (300 0);
+Change Drill 22;
+Pad '8' Long 0 35 R90 (350 0);
+Change Drill 22;
+Pad '9' Long 0 35 R90 (400 0);
+Change Drill 22;
+Pad '10' Long 0 35 R90 (450 0);
+Change Drill 22;
+Pad '11' Long 0 35 R90 (500 0);
+Change Drill 22;
+Pad '12' Long 0 35 R90 (550 0);
+Change Drill 22;
+Pad '13' Long 0 35 R90 (600 0);
+Change Drill 22;
+Pad '14' Long 0 35 R90 (650 0);
+Change Drill 22;
+Pad '15' Long 0 35 R90 (700 0);
+Change Drill 22;
+Pad '16' Long 0 35 R90 (750 0);
+Change Drill 22;
+Pad '17' Long 0 35 R90 (800 0);
+Change Drill 22;
+Pad '18' Long 0 35 R90 (850 0);
+Change Drill 22;
+Pad '19' Long 0 35 R90 (900 0);
+Change Drill 22;
+Pad '20' Long 0 35 R90 (950 0);
+Change Drill 37;
+Pad '21' Round 0 60 R90 (50 -160);
+Change Drill 37;
+Pad '22' Round 0 60 R90 (900 -160);
+Change Drill 37;
+Pad '23' Round 0 60 R0 (475 -160);
+Layer 21;
+Wire 6 (-95 -385) (1045 -385);
+Wire 6 (1045 -385) (1045 65);
+Wire 6 (1045 65) (-95 65);
+Wire 6 (-95 65) (-95 -385);
+Wire 20 (-105 0) -180 (-135 0);
+Wire 20 (-135 0) -180 (-105 0);
+Change Size 50;
+Change Ratio 6;
+Text '>Value' SR0 (407 -25);
+Layer 51;
+Wire 6 (-90 -380) (1040 -380);
+Wire 6 (1040 -380) (1040 60);
+Wire 6 (1040 60) (-90 60);
+Wire 6 (-90 60) (-90 -380);
+Wire 20 (15 75) -180 (-15 75);
+Wire 20 (-15 75) -180 (15 75);
+Layer 22;
+Wire 20 (-105 0) -180 (-135 0);
+Wire 20 (-135 0) -180 (-105 0);
+Layer 25;
+Change Size 50;
+Change Ratio 6;
+Text '>Name' SR0 (346 -25);
+Layer 27;
+
+Edit 'CONN20_104074_28P7X11P18.sym';
+Layer 94;
+Pin '1' Pas None Middle R0 Pad 0 (0 0)
+Pin '2' Pas None Middle R0 Pad 0 (0 -100)
+Pin '3' Pas None Middle R0 Pad 0 (0 -200)
+Pin '4' Pas None Middle R0 Pad 0 (0 -300)
+Pin '5' Pas None Middle R0 Pad 0 (0 -400)
+Pin '6' Pas None Middle R0 Pad 0 (0 -500)
+Pin '7' Pas None Middle R0 Pad 0 (0 -600)
+Pin '8' Pas None Middle R0 Pad 0 (0 -700)
+Pin '9' Pas None Middle R0 Pad 0 (0 -800)
+Pin '10' Pas None Middle R0 Pad 0 (0 -900)
+Pin '11' Pas None Middle R0 Pad 0 (0 -1000)
+Pin '12' Pas None Middle R0 Pad 0 (0 -1100)
+Pin '13' Pas None Middle R0 Pad 0 (0 -1200)
+Pin '14' Pas None Middle R0 Pad 0 (0 -1300)
+Pin '15' Pas None Middle R0 Pad 0 (0 -1400)
+Pin '16' Pas None Middle R0 Pad 0 (0 -1500)
+Pin '17' Pas None Middle R0 Pad 0 (0 -1600)
+Pin '18' Pas None Middle R0 Pad 0 (0 -1700)
+Pin '19' Pas None Middle R0 Pad 0 (0 -1800)
+Pin '20' Pas None Middle R0 Pad 0 (0 -1900)
+Pin '21' Pas None Middle R0 Pad 0 (0 -2000)
+Pin '22' Pas None Middle R0 Pad 0 (0 -2100)
+Pin '23' Pas None Middle R0 Pad 0 (0 -2200)
+Wire 6 (400 0) (200 0);
+Wire 6 (400 -100) (200 -100);
+Wire 6 (400 -200) (200 -200);
+Wire 6 (400 -300) (200 -300);
+Wire 6 (400 -400) (200 -400);
+Wire 6 (400 -500) (200 -500);
+Wire 6 (400 -600) (200 -600);
+Wire 6 (400 -700) (200 -700);
+Wire 6 (400 -800) (200 -800);
+Wire 6 (400 -900) (200 -900);
+Wire 6 (400 -1000) (200 -1000);
+Wire 6 (400 -1100) (200 -1100);
+Wire 6 (400 -1200) (200 -1200);
+Wire 6 (400 -1300) (200 -1300);
+Wire 6 (400 -1400) (200 -1400);
+Wire 6 (400 -1500) (200 -1500);
+Wire 6 (400 -1600) (200 -1600);
+Wire 6 (400 -1700) (200 -1700);
+Wire 6 (400 -1800) (200 -1800);
+Wire 6 (400 -1900) (200 -1900);
+Wire 6 (400 0) (350 33);
+Wire 6 (400 -100) (350 -67);
+Wire 6 (400 -200) (350 -167);
+Wire 6 (400 -300) (350 -267);
+Wire 6 (400 -400) (350 -367);
+Wire 6 (400 -500) (350 -467);
+Wire 6 (400 -600) (350 -567);
+Wire 6 (400 -700) (350 -667);
+Wire 6 (400 -800) (350 -767);
+Wire 6 (400 -900) (350 -867);
+Wire 6 (400 -1000) (350 -967);
+Wire 6 (400 -1100) (350 -1067);
+Wire 6 (400 -1200) (350 -1167);
+Wire 6 (400 -1300) (350 -1267);
+Wire 6 (400 -1400) (350 -1367);
+Wire 6 (400 -1500) (350 -1467);
+Wire 6 (400 -1600) (350 -1567);
+Wire 6 (400 -1700) (350 -1667);
+Wire 6 (400 -1800) (350 -1767);
+Wire 6 (400 -1900) (350 -1867);
+Wire 6 (400 0) (350 -33);
+Wire 6 (400 -100) (350 -133);
+Wire 6 (400 -200) (350 -233);
+Wire 6 (400 -300) (350 -333);
+Wire 6 (400 -400) (350 -433);
+Wire 6 (400 -500) (350 -533);
+Wire 6 (400 -600) (350 -633);
+Wire 6 (400 -700) (350 -733);
+Wire 6 (400 -800) (350 -833);
+Wire 6 (400 -900) (350 -933);
+Wire 6 (400 -1000) (350 -1033);
+Wire 6 (400 -1100) (350 -1133);
+Wire 6 (400 -1200) (350 -1233);
+Wire 6 (400 -1300) (350 -1333);
+Wire 6 (400 -1400) (350 -1433);
+Wire 6 (400 -1500) (350 -1533);
+Wire 6 (400 -1600) (350 -1633);
+Wire 6 (400 -1700) (350 -1733);
+Wire 6 (400 -1800) (350 -1833);
+Wire 6 (400 -1900) (350 -1933);
+Wire 6 (200 100) (200 -2300);
+Wire 6 (200 -2300) (500 -2300);
+Wire 6 (500 -2300) (500 100);
+Wire 6 (500 100) (200 100);
+Layer 97;
+Layer 95;
+Change Size 82;
+Change Ratio 6;
+Text '>Name' SR0 (164 209);
+
+Edit '104074-4.dev';
+Prefix 'J';
+Description '';
+Value Off;
+Add CONN20_104074_28P7X11P18 'A' Next  0 (0 0);
+Package 'CONN20_104074_28P7X11P18_TEC';
+Technology '';
+Attribute Copyright 'Copyright (C) 2016 Accelerated Designs. All rights reserved';
+Attribute Vendor 'TE Connectivity';
+Attribute Manufacturer_Part_Number '104074-4';
+Attribute Built_By 'EMA_Anthony';
+Attribute TE_Part_Number '104074-4';
+Attribute PRODUCT 'Connector';
+Attribute TYPE 'Header';
+Attribute ROWS-CONFIG '1';
+Attribute PITCH_MM_ '0.05';
+Attribute POSITIONS '20';
+Attribute SourceLibrary 'TE_Connectivity_250_Part_Delivery_1_2018-08-13';
+Connect 'A.1' '1';
+Connect 'A.2' '2';
+Connect 'A.3' '3';
+Connect 'A.4' '4';
+Connect 'A.5' '5';
+Connect 'A.6' '6';
+Connect 'A.7' '7';
+Connect 'A.8' '8';
+Connect 'A.9' '9';
+Connect 'A.10' '10';
+Connect 'A.11' '11';
+Connect 'A.12' '12';
+Connect 'A.13' '13';
+Connect 'A.14' '14';
+Connect 'A.15' '15';
+Connect 'A.16' '16';
+Connect 'A.17' '17';
+Connect 'A.18' '18';
+Connect 'A.19' '19';
+Connect 'A.20' '20';
+Connect 'A.21' '21';
+Connect 'A.22' '22';
+Connect 'A.23' '23';

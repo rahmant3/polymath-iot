@@ -1,0 +1,72 @@
+# Created by Ultra Librarian Gold 8.3.283 Copyright © 1999-2018
+# Frank Frank, Accelerated Designs
+
+Grid mil;
+Set Wire_Bend 2;
+
+
+Edit 'SW_TL9320_EWI.pac';
+Layer 1;
+Smd '1' 67 106 -0 R0 (-159.5 0);
+Layer 1;
+Smd '2' 67 106 -0 R0 (159.5 0);
+Layer 21;
+Wire 6 (-170 -170) (170 -170);
+Wire 6 (170 -170) (170 -66);
+Wire 6 (170 170) (-170 170);
+Wire 6 (-170 170) (-170 66);
+Wire 6 (-170 -66) (-170 -170);
+Wire 6 (170 66) (170 170);
+Wire 20 (-226 0) -180 (-256 0);
+Wire 20 (-256 0) -180 (-226 0);
+Change Size 50;
+Change Ratio 6;
+Text '>Value' SR0 (-68 -25);
+Layer 51;
+Wire 6 (-166 -166) (166 -166);
+Wire 6 (166 -166) (166 166);
+Wire 6 (166 166) (-166 166);
+Wire 6 (-166 166) (-166 -166);
+Wire 20 (-144 75) -180 (-174 75);
+Wire 20 (-174 75) -180 (-144 75);
+Layer 22;
+Wire 20 (-226 0) -180 (-256 0);
+Wire 20 (-256 0) -180 (-226 0);
+Layer 25;
+Change Size 50;
+Change Ratio 6;
+Text '>Name' SR0 (-129 -25);
+Layer 27;
+
+Edit 'SW2.sym';
+Layer 94;
+Pin '1' Pas None Short R0 Pad 0 (0 0)
+Pin '2' Pas None Short R180 Pad 0 (600 0)
+Wire 8 (100 0) (150 0);
+Wire 8 (500 0) (450 0);
+Wire 8 (175 0) (450 75);
+Wire 10 (450 0) -180 (400 0);
+Wire 10 (400 0) -180 (450 0);
+Wire 10 (150 0) -180 (200 0);
+Wire 10 (200 0) -180 (150 0);
+Layer 97;
+Layer 95;
+Change Size 137;
+Change Ratio 10;
+Text '>Name' SR0 (-11 82);
+
+Edit 'TL9320AF400QG.dev';
+Prefix 'SW';
+Description '';
+Value Off;
+Add SW2 'A' Next  0 (0 0);
+Package 'SW_TL9320_EWI';
+Technology '';
+Attribute Datasheet 'https://sten-eswitch-13110800-production.s3.amazonaws.com/system/asset/product_line/data_sheet/249/TL9320.pdf';
+Attribute Vendor 'E-Switch';
+Attribute Manufacturer_Part_Number 'TL9320AF400QG';
+Attribute Built_By 'EMA_Cory';
+Attribute Copyright 'Copyright (C) 2018 Accelerated Designs. All rights reserved';
+Attribute SourceLibrary 'Add_to_database_2020-11-10';
+Connect 'A.1' '1';
+Connect 'A.2' '2';
