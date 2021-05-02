@@ -479,7 +479,7 @@ void StartDefaultTask(void const * argument)
 						debug("Error: Failed to read data from sensor.\r\n");
 						reading = 0;
 					}
-					slaveTx.getSensors.sensors[ix].data = (uint16_t)(reading);
+					slaveTx.getSensors.sensors[ix].data = reading;
 				}
 
 				if (PM_PROTOCOL_SUCCESS != pmProtocolSend(&slaveTx, &slave_uart))

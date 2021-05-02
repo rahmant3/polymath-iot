@@ -47,11 +47,13 @@
 #define PM_PROTOCOL_TX_IN_PROGRESS 0x04  //!< A packet send failed due to another transmit in progress.
 #define PM_PROTOCOL_RX_CMD_INVALID 0x05  //!< A packet read could not be decoded.
 
-#define PM_MAX_PAYLOAD_BYTES 64
+#define PM_MAX_PAYLOAD_BYTES 128
 
 #define PM_NUM_OVERHEAD_BYTES 0x03
 #define MAX_TX_BYTES         (PM_MAX_PAYLOAD_BYTES + PM_NUM_OVERHEAD_BYTES)
 #define MAX_RX_BYTES         (PM_MAX_PAYLOAD_BYTES + PM_NUM_OVERHEAD_BYTES)
+
+#define PM_SIZE_OF_SENSOR_STRUCT (6u)
 
 // --------------------------------------------------------------------------------------------------------------------
 // TYPEDEFS

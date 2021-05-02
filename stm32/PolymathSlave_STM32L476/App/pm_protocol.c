@@ -11,6 +11,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 #include <string.h>
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "pm_protocol.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,7 +26,7 @@
 
 #define PM_PROTOCOL_ACK_BYTE 0x55
 
-#define END_OF_PACKET_TIMEOUT_ms 250
+#define END_OF_PACKET_TIMEOUT_ms 5000
 
 //#define DEBUG
 
@@ -168,7 +171,10 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         		if ((sizeof(ackBytes) == context->driver->rx(ack, sizeof(ack))) && (0 == memcmp(ackBytes, ack, sizeof(ackBytes))))
         		{
         			// Ack received, send the rest of the bytes.
-
+#if 0
+        			// Delay a short period of time to give the receiver a chance to receive the bytes.
+					vTaskDelay(pdMS_TO_TICKS(5));
+#endif
                 	DEBUG_PRINTF("[pm_protocol_TX] ACK received. Transmitted the rest of the bytes.\r\n");
 
         			context->txWaitingForAck = false;
@@ -198,17 +204,16 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
 							context->rxLen = context->rxBuffer[LEN_BYTE_OFFSET];
 							if ((context->rxLen >= PM_NUM_OVERHEAD_BYTES) && (context->rxLen <= MAX_RX_BYTES))
 							{
-								uint8_t ack = PM_PROTOCOL_ACK_BYTE;
 
 								DEBUG_PRINTF("[pm_protocol_RX] Received a length byte. Transmitting ACK.\r\n");
 								context->rxBytes = 2;
 								context->rxState = WAITING_FOR_DATA;
 
+
 								if (sizeof(ackBytes) != context->driver->tx(ackBytes, sizeof(ackBytes)))
 								{
 									DEBUG_PRINTF("[pm_protocol_TX] Failed to transmit ACK.\r\n");
 								}
-
 
 								uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
 									context->rxLen - context->rxBytes);
@@ -254,6 +259,7 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
 						if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
 						{
 							// Timeout occurred.
+							DEBUG_PRINTF("[pm_protocol_RX] Timeout occurred.\r\n");
 							context->rxState = TIMEOUT_OCCURRED;
 						}
 						else
@@ -346,8 +352,11 @@ int pmProtocolSend(pmCmdPayloadDefinition_t * tx, pmProtocolContext_t * context)
                 {
                     rawTx.bytes[ix++] = tx->getSensors.sensors[sensorIdx].sensorId & 0xFF;
                     rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].sensorId >> 8) & 0xFF;
+
                     rawTx.bytes[ix++] = tx->getSensors.sensors[sensorIdx].data & 0xFF;
                     rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 8) & 0xFF;
+					rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 16) & 0xFF;
+					rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 24) & 0xFF;
                 }
                 rawTx.numBytes = ix;
 
@@ -452,20 +461,22 @@ int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context)
                 }
                 case PM_CMD_GET_SENSORS:
                 {
-                    // Aside from the command byte, the rest of the bytes should be a multiple of 4.
-                    if ((rawRx.numBytes > 0) && ((rawRx.numBytes - 1) % 4 == 0))
+                    // Aside from the command byte, the rest of the bytes should be a multiple of PM_SIZE_OF_SENSOR_STRUCT.
+                    if ((rawRx.numBytes > 0) && ((rawRx.numBytes - 1) % PM_SIZE_OF_SENSOR_STRUCT == 0))
                     {
-                        localRx.getSensors.numSensors = (rawRx.numBytes - 1) / 4;
+                        localRx.getSensors.numSensors = (rawRx.numBytes - 1) / PM_SIZE_OF_SENSOR_STRUCT;
 
                         if (localRx.getSensors.numSensors < PM_MAX_SENSORS_PER_CLUSTER)
                         {
 							for (uint8_t ix = 0; ix < localRx.getSensors.numSensors; ix++)
 							{
-								localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (4 * ix)];
-								localRx.getSensors.sensors[ix].sensorId += (rawRx.bytes[2 + (4 * ix)] << 8);
+								localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (PM_SIZE_OF_SENSOR_STRUCT * ix)];
+								localRx.getSensors.sensors[ix].sensorId += (rawRx.bytes[2 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 8);
 
-								localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (4 * ix)];
-								localRx.getSensors.sensors[ix].data += (rawRx.bytes[4 + (4 * ix)] << 8);
+								localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (PM_SIZE_OF_SENSOR_STRUCT * ix)];
+								localRx.getSensors.sensors[ix].data += (rawRx.bytes[4 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 8);
+								localRx.getSensors.sensors[ix].data += (rawRx.bytes[5 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 16);
+								localRx.getSensors.sensors[ix].data += (rawRx.bytes[6 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 24);
 
 								rc = PM_PROTOCOL_SUCCESS;
 							}
