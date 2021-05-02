@@ -11,6 +11,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 #include <string.h>
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "pm_protocol.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -21,14 +24,22 @@
 #define START_BYTE_OFFSET 0 // Byte offset into a packet containing the start byte.
 #define LEN_BYTE_OFFSET   1 // Byte offset into a packet containing the length byte.
 
-#define END_OF_PACKET_TIMEOUT_ms 250
+#define PM_PROTOCOL_ACK_BYTE 0x55
+
+#define END_OF_PACKET_TIMEOUT_ms 5000 // Choose a very large timeout before giving up on sending a packet.
 
 #define DEBUG
 
 #ifdef DEBUG
-	//#include <Fw_global_config.h>
-	//#include <dbg_uart.h>
-	#define DEBUG_PRINTF(s) //dbg_str(s)
+	#ifdef STM32L476xx
+		extern void debug(const char * string);
+
+		#define DEBUG_PRINTF(s) debug(s)
+	#else
+		#include <Fw_global_config.h>
+		#include <dbg_uart.h>
+		#define DEBUG_PRINTF(s) dbg_str(s)
+	#endif
 #else
 	#define DEBUG_PRINTF(s)
 #endif
@@ -50,23 +61,21 @@ typedef enum pmProtocolRxStates_e
 // --------------------------------------------------------------------------------------------------------------------
 // VARIABLES
 // --------------------------------------------------------------------------------------------------------------------
-static pmProtocolContext_t g_pmProtocolContext;
+static const uint8_t ackBytes[] = { PM_PROTOCOL_ACK_BYTE };
 
 // --------------------------------------------------------------------------------------------------------------------
 // FUNCTIONS
 // --------------------------------------------------------------------------------------------------------------------
-int pmProtocolInit(const pmProtocolDriver_t * driver, pmProtocolContext_t * context)
+int pmProtocolInit(const pmCoreUartDriver_t * driver, pmProtocolContext_t * context)
 {
     int rc = PM_PROTOCOL_FAILURE;
-    if (   (NULL != context) 
+    if (   (NULL != context)
         && (NULL == context->driver) // If the driver is null, we can assume the module has not yet been initialized.
-        && (NULL != driver) 
-        && (NULL != driver->rx) 
+        && (NULL != driver)
+        && (NULL != driver->rx)
         && (NULL != driver->tx))
     {
         context->driver = driver;
-
-        (void)memset(&g_pmProtocolContext, 0, sizeof(g_pmProtocolContext));
 
         rc = PM_PROTOCOL_SUCCESS;
     }
@@ -83,13 +92,12 @@ int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * conte
         if (!context->txInProgress)
         {
             context->txInProgress = true;
-            
-            uint8_t ix = 0;
+
             context->txBuffer[START_BYTE_OFFSET] = START_BYTE;
             context->txBuffer[LEN_BYTE_OFFSET] = tx->numBytes + PM_NUM_OVERHEAD_BYTES; // Extra 3 bytes for start, length, checksum.
 
             (void)memcpy(&context->txBuffer[PM_NUM_OVERHEAD_BYTES - 1], tx->bytes, tx->numBytes);
-            
+
             uint8_t checksum = 0x00;
             uint8_t len = context->txBuffer[LEN_BYTE_OFFSET];
             for (uint8_t index = 0; index < (len - 1); index++)
@@ -112,7 +120,7 @@ int pmProtocolSendPacket(pmProtocolRawPacket_t * tx, pmProtocolContext_t * conte
 int pmProtocolReadPacket(pmProtocolRawPacket_t * rx, pmProtocolContext_t * context)
 {
     int rc = PM_PROTOCOL_FAILURE;
-    
+
     if ((NULL != context->driver) && (NULL != rx))
     {
         pmProtocolRxStates_t rxState = context->rxState;
@@ -150,17 +158,25 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         	if (!context->txWaitingForAck)
         	{
         		// Transmit the first two bytes.
+            	DEBUG_PRINTF("[pm_protocol_TX] Transmitted the first two bytes.\r\n");
 				if (0 < context->driver->tx(context->txBuffer, LEN_BYTE_OFFSET + 1))
 				{
 					context->txWaitingForAck = true;
 				}
         	}
-        	else
+
+        	if (context->txWaitingForAck)
         	{
-        		uint8_t ack;
-        		if (1 == context->driver->rx(&ack, 1))
+        		uint8_t ack[sizeof(ackBytes)];
+        		if ((sizeof(ackBytes) == context->driver->rx(ack, sizeof(ack))) && (0 == memcmp(ackBytes, ack, sizeof(ackBytes))))
         		{
         			// Ack received, send the rest of the bytes.
+#if 0
+        			// Delay a short period of time to give the receiver a chance to receive the bytes.
+					vTaskDelay(pdMS_TO_TICKS(5));
+#endif
+                	DEBUG_PRINTF("[pm_protocol_TX] ACK received. Transmitted the rest of the bytes.\r\n");
+
         			context->txWaitingForAck = false;
         			if (0 < context->driver->tx(&context->txBuffer[LEN_BYTE_OFFSET + 1], context->txBuffer[LEN_BYTE_OFFSET] - 2))
         			{
@@ -169,93 +185,101 @@ void pmProtocolPeriodic(uint32_t ticks_ms, pmProtocolContext_t * context)
         		}
         	}
         }
-
-        // Handle receives.
-        switch(context->rxState)
+        else
         {
-            case WAITING_FOR_START:
-            {
-                if (2 == context->driver->rx(context->rxBuffer, 2))
-                {
-                    if (context->rxBuffer[START_BYTE_OFFSET] == START_BYTE)
-                    {
-                    	DEBUG_PRINTF("Received a start byte.\r\n");
-                        context->rxStartTicks = ticks_ms;
-                        context->rxBytes = 1;
 
-                        context->rxLen = context->rxBuffer[LEN_BYTE_OFFSET];
-						if (context->rxLen <= MAX_RX_BYTES)
+			// Handle receives.
+			switch(context->rxState)
+			{
+				case WAITING_FOR_START:
+				{
+					if (2 == context->driver->rx(context->rxBuffer, 2))
+					{
+						if (context->rxBuffer[START_BYTE_OFFSET] == START_BYTE)
 						{
-							uint8_t ack = 0x40;
-							context->driver->tx(&ack, 1);
+							DEBUG_PRINTF("[pm_protocol_RX] Received a start byte.\r\n");
+							context->rxStartTicks = ticks_ms;
+							context->rxBytes = 1;
 
-							DEBUG_PRINTF("Received a length byte.\r\n");
-							context->rxBytes = 2;
-							context->rxState = WAITING_FOR_DATA;
+							context->rxLen = context->rxBuffer[LEN_BYTE_OFFSET];
+							if ((context->rxLen >= PM_NUM_OVERHEAD_BYTES) && (context->rxLen <= MAX_RX_BYTES))
+							{
+
+								DEBUG_PRINTF("[pm_protocol_RX] Received a length byte. Transmitting ACK.\r\n");
+								context->rxBytes = 2;
+								context->rxState = WAITING_FOR_DATA;
 
 
-			                uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
-			                    context->rxLen - context->rxBytes);
+								if (sizeof(ackBytes) != context->driver->tx(ackBytes, sizeof(ackBytes)))
+								{
+									DEBUG_PRINTF("[pm_protocol_TX] Failed to transmit ACK.\r\n");
+								}
 
-			                context->rxBytes += rxBytes;
+								uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
+									context->rxLen - context->rxBytes);
 
+								context->rxBytes += rxBytes;
+
+							}
+							else
+							{
+								DEBUG_PRINTF("[pm_protocol_RX] Received an invalid length byte.\r\n");
+								context->rxState = CHECKSUM_ERROR;
+							}
+						}
+					}
+					break;
+				}
+				case WAITING_FOR_DATA:
+				{
+					if (context->rxBytes >= context->rxLen)
+					{
+						// We have the full payload ready. Verify the checksum.
+						DEBUG_PRINTF("[pm_protocol_RX] Received a full payload. Processing.\r\n");
+
+						uint8_t checksum = 0;
+						for (uint8_t ix = 0; ix < context->rxLen; ix++)
+						{
+							checksum += context->rxBuffer[ix];
+						}
+
+						if (checksum == 0)
+						{
+							DEBUG_PRINTF("[pm_protocol_RX] Received a payload.\r\n");
+							context->rxState = PAYLOAD_READY;
 						}
 						else
 						{
+							DEBUG_PRINTF("[pm_protocol_RX] Received a payload with checksum error.\r\n");
 							context->rxState = CHECKSUM_ERROR;
 						}
-                    }
-                }
-                break;
-            }
-            case WAITING_FOR_DATA:
-            {
-                if (context->rxBytes >= context->rxLen)
-                {
-                    // We have the full payload ready. Verify the checksum.
-                    uint8_t checksum = 0;
-                    for (uint8_t ix = 0; ix < context->rxLen; ix++)
-                    {
-                        checksum += context->rxBuffer[ix];
-                    }
-
-                    if (checksum == 0)
-                    {
-                    	DEBUG_PRINTF("Received a payload.\r\n");
-                        context->rxState = PAYLOAD_READY;
-                    }
-                    else
-                    {
-                    	DEBUG_PRINTF("Received a payload with checksum error.\r\n");
-                        context->rxState = CHECKSUM_ERROR;
-                    }
-                }
-                else
-                {
-					if ((ticks_ms - context->rxStartTicks) > END_OF_PACKET_TIMEOUT_ms)
-					{
-						#ifndef DEBUG
-							// Timeout occurred.
-							context->rxState = TIMEOUT_OCCURRED;
-						#endif
 					}
 					else
 					{
-						uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
-							context->rxLen - context->rxBytes);
+						if ((ticks_ms - context->rxStartTicks) > pdMS_TO_TICKS(END_OF_PACKET_TIMEOUT_ms))
+						{
+							// Timeout occurred.
+							DEBUG_PRINTF("[pm_protocol_RX] Timeout occurred.\r\n");
+							context->rxState = TIMEOUT_OCCURRED;
+						}
+						else
+						{
+							uint8_t rxBytes = context->driver->rx(&context->rxBuffer[context->rxBytes],
+								context->rxLen - context->rxBytes);
 
-						context->rxBytes += rxBytes;
+							context->rxBytes += rxBytes;
+						}
 					}
-                }
 
-                break;
-            }
-            case PAYLOAD_READY:    // Pass through
-            case TIMEOUT_OCCURRED: // Pass through
-            case CHECKSUM_ERROR:   // Pass through
-            default:
-                break;
-        }
+					break;
+				}
+				case PAYLOAD_READY:    // Pass through
+				case TIMEOUT_OCCURRED: // Pass through
+				case CHECKSUM_ERROR:   // Pass through
+				default:
+					break;
+			}
+		}
     }
 }
 
@@ -278,7 +302,7 @@ int pmProtocolSend(pmCmdPayloadDefinition_t * tx, pmProtocolContext_t * context)
                 rc = PM_PROTOCOL_SUCCESS;
                 break;
             }
-            case PM_CMD_WRITE_STATUS: 
+            case PM_CMD_WRITE_STATUS:
             {
                 rawTx.bytes[0] = tx->commandCode;
                 rawTx.bytes[1] = tx->writeStatus.status;
@@ -328,15 +352,18 @@ int pmProtocolSend(pmCmdPayloadDefinition_t * tx, pmProtocolContext_t * context)
                 {
                     rawTx.bytes[ix++] = tx->getSensors.sensors[sensorIdx].sensorId & 0xFF;
                     rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].sensorId >> 8) & 0xFF;
+
                     rawTx.bytes[ix++] = tx->getSensors.sensors[sensorIdx].data & 0xFF;
                     rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 8) & 0xFF;
+					rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 16) & 0xFF;
+					rawTx.bytes[ix++] = (tx->getSensors.sensors[sensorIdx].data >> 24) & 0xFF;
                 }
                 rawTx.numBytes = ix;
 
                 rc = PM_PROTOCOL_SUCCESS;
                 break;
             }
-            case PM_CMD_WRITE_STATUS: 
+            case PM_CMD_WRITE_STATUS:
             {
                 rawTx.bytes[0] = tx->commandCode;
                 rawTx.bytes[1] = tx->writeStatus.status;
@@ -392,7 +419,7 @@ int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context)
                     rc = PM_PROTOCOL_SUCCESS;
                     break;
                 }
-                case PM_CMD_WRITE_STATUS: 
+                case PM_CMD_WRITE_STATUS:
                 {
                     localRx.writeStatus.status = rawRx.bytes[1];
                     rc = PM_PROTOCOL_SUCCESS;
@@ -410,11 +437,11 @@ int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context)
                 {
                     if (rawRx.numBytes == 5)
                     {
-                        localRx.protocolInfo.protocolIdentifier = rawRx.bytes[1] 
-                            + (rawRx.bytes[2] << 8) 
-                            + (rawRx.bytes[3] << 16) 
+                        localRx.protocolInfo.protocolIdentifier = rawRx.bytes[1]
+                            + (rawRx.bytes[2] << 8)
+                            + (rawRx.bytes[3] << 16)
                             + (rawRx.bytes[4] << 24);
-                        
+
                         rc = PM_PROTOCOL_SUCCESS;
                     }
                     break;
@@ -423,35 +450,45 @@ int pmProtocolRead(pmCmdPayloadDefinition_t * rx, pmProtocolContext_t * context)
                 {
                     if (rawRx.numBytes == 5)
                     {
-                        localRx.clusterId.clusterIdentifier = rawRx.bytes[1] 
-                            + (rawRx.bytes[2] << 8) 
-                            + (rawRx.bytes[3] << 16) 
+                        localRx.clusterId.clusterIdentifier = rawRx.bytes[1]
+                            + (rawRx.bytes[2] << 8)
+                            + (rawRx.bytes[3] << 16)
                             + (rawRx.bytes[4] << 24);
-                        
+
                         rc = PM_PROTOCOL_SUCCESS;
                     }
                     break;
                 }
                 case PM_CMD_GET_SENSORS:
                 {
-                    // Aside from the command byte, the rest of the bytes should be a multiple of 4.
-                    if ((rawRx.numBytes > 0) && ((rawRx.numBytes - 1) % 4 == 0))
+                    // Aside from the command byte, the rest of the bytes should be a multiple of PM_SIZE_OF_SENSOR_STRUCT.
+                    if ((rawRx.numBytes > 0) && ((rawRx.numBytes - 1) % PM_SIZE_OF_SENSOR_STRUCT == 0))
                     {
-                        localRx.getSensors.numSensors = (rawRx.numBytes - 1) / 4;
-                        for (uint8_t ix = 0; ix < localRx.getSensors.numSensors; ix++)
-                        {
-                            localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (4 * ix)];
-                            localRx.getSensors.sensors[ix].sensorId += (rawRx.bytes[2 + (4 * ix)] << 8);
+                        localRx.getSensors.numSensors = (rawRx.numBytes - 1) / PM_SIZE_OF_SENSOR_STRUCT;
 
-                            localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (4 * ix)];
-                            localRx.getSensors.sensors[ix].data += (rawRx.bytes[4 + (4 * ix)] << 8);
-                            
-                            rc = PM_PROTOCOL_SUCCESS;
-                        }   
+                        if (localRx.getSensors.numSensors < PM_MAX_SENSORS_PER_CLUSTER)
+                        {
+							for (uint8_t ix = 0; ix < localRx.getSensors.numSensors; ix++)
+							{
+								localRx.getSensors.sensors[ix].sensorId = rawRx.bytes[1 + (PM_SIZE_OF_SENSOR_STRUCT * ix)];
+								localRx.getSensors.sensors[ix].sensorId += (rawRx.bytes[2 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 8);
+
+								localRx.getSensors.sensors[ix].data = rawRx.bytes[3 + (PM_SIZE_OF_SENSOR_STRUCT * ix)];
+								localRx.getSensors.sensors[ix].data += (rawRx.bytes[4 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 8);
+								localRx.getSensors.sensors[ix].data += (rawRx.bytes[5 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 16);
+								localRx.getSensors.sensors[ix].data += (rawRx.bytes[6 + (PM_SIZE_OF_SENSOR_STRUCT * ix)] << 24);
+
+								rc = PM_PROTOCOL_SUCCESS;
+							}
+                        }
+                        else
+                        {
+                        	DEBUG_PRINTF("[pm_protocol_RX] Received an invalid sensor payload.\r\n");
+                        }
                     }
                     break;
                 }
-                case PM_CMD_WRITE_STATUS: 
+                case PM_CMD_WRITE_STATUS:
                 {
                     if (rawRx.numBytes == 2)
                     {

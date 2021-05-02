@@ -330,6 +330,103 @@ static void pm_slave_receive_cmd(const struct cli_cmd_entry *pEntry)
 	}
 }
 
+#include "pm_ble_nrf51.h"
+
+static void pm_ble_send_raw(const struct cli_cmd_entry *pEntry)
+{
+    char send_string_buf[64];
+    memset(send_string_buf, 0, sizeof(send_string_buf));
+
+    CLI_string_buf_getshow( "string to send ", send_string_buf, sizeof(send_string_buf) );
+
+	uint8_t len = strnlen(send_string_buf, 255);
+
+	if (len == pmBleUartService_nRF51.tx(send_string_buf, len))
+	{
+		dbg_str("Successfully sent the test string over BLE UART: ");
+		dbg_str(send_string_buf);
+		dbg_str("\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send the test string over BLE UART.\r\n");
+	}
+}
+
+static void pm_ble_receive_raw(const struct cli_cmd_entry *pEntry)
+{
+    char read_string_buf[64];
+
+	if (0 < pmBleUartService_nRF51.rx(read_string_buf, sizeof(read_string_buf)))
+	{
+		dbg_str("Successfully read the test string over BLE UART: ");
+		dbg_str(read_string_buf);
+		dbg_str("\r\n");
+	}
+	else
+	{
+		dbg_str("Error: Failed to send the test string over BLE UART.\r\n");
+	}
+}
+
+
+static void pm_ble_direct(const struct cli_cmd_entry *pEntry)
+{
+	dbg_str("Switching to BLE_TEST mode. Type two '\\n' characters to escape this mode.\n");
+
+	// Switch to BLE test mode.
+	pmSetMode(PM_MODE_TEST_BLE);
+
+	// Block until we've exited this mode.
+	do
+	{
+		vTaskDelay(100);
+	} while (pmGetMode() == PM_MODE_TEST_BLE);
+}
+
+static void pm_test_training(const struct cli_cmd_entry *pEntry)
+{
+	dbg_str("Switching to TRAINING_TEST mode. Power must be cycled to escape this mode.\n");
+
+	// Switch to BLE test mode.
+	pmSetMode(PM_MODE_TEST_TRAINING);
+
+	// Block until we've exited this mode.
+	do
+	{
+		vTaskDelay(100);
+	} while (pmGetMode() == PM_MODE_TEST_TRAINING);
+}
+
+static void pm_ble_register(const struct cli_cmd_entry *pEntry)
+{
+	dbg_str("Switching to pairing mode to force cluster configuration.\n\n");
+
+	// Force entry into pairing mode.
+	pmSetMode(PM_MODE_PAIRING);
+}
+
+void pm_ble_test_update_char(uint16_t idx, pmBleDataType_t data);
+
+static void pm_ble_set_char(const struct cli_cmd_entry *pEntry)
+{
+	static uint32_t data = 0;
+
+    char send_string_buf[64];
+    memset(send_string_buf, 0, sizeof(send_string_buf));
+
+    CLI_string_buf_getshow( "Index to update ", send_string_buf, sizeof(send_string_buf) );
+
+    int32_t idx = strtol(send_string_buf, NULL, 0);
+
+    dbg_str("Updating the data for IDX ");
+    dbg_int(idx);
+    dbg_str(" with data ");
+    dbg_int(data);
+    dbg_str("\n");
+
+    pm_ble_test_update_char(idx, data++);
+}
 
 const struct cli_cmd_entry qf_diagnostic[] =
 {
@@ -354,11 +451,27 @@ const struct cli_cmd_entry pm_test[] =
 
 	CLI_CMD_SIMPLE( "s_receive_raw", pm_slave_receive_raw, "Read user string from the slave node." ),
 	CLI_CMD_SIMPLE( "s_receive_cmd", pm_slave_receive_cmd, "Read command from the slave node." ),
+
+    CLI_CMD_TERMINATE()
+};
+
+const struct cli_cmd_entry pm_ble[] =
+{
+    CLI_CMD_SIMPLE( "send_raw",    pm_ble_send_raw,    "Send user string over the BLE UART service." ),
+	CLI_CMD_SIMPLE( "receive_raw", pm_ble_receive_raw, "Read a user string on the BLE UART service." ),
+	CLI_CMD_SIMPLE( "set_char",  pm_ble_set_char,  "Update the given characteristic index with a random value." ),
+
+	CLI_CMD_SIMPLE( "direct",    pm_ble_direct,    "Send and receive strings direct to the BLE peripheral." ),
+	CLI_CMD_SIMPLE( "register",  pm_ble_register,  "Force register service and characteristic UUIDs." ),
+
+	CLI_CMD_SIMPLE( "training", pm_test_training, "Switch to training mode." ),
+
     CLI_CMD_TERMINATE()
 };
 
 const struct cli_cmd_entry my_main_menu[] = {
     CLI_CMD_SUBMENU( "diag", qf_diagnostic, "QuickFeather diagnostic commands" ),
     CLI_CMD_SUBMENU( "test", pm_test, "Polymath test commands" ),
+	CLI_CMD_SUBMENU( "ble", pm_ble, "Polymath ble commands" ),
     CLI_CMD_TERMINATE()
 };

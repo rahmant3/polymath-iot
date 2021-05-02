@@ -23,18 +23,23 @@
 #include <eoss3_hal_fpga_usbserial.h>
 #include <eoss3_hal_uart.h>
 
-#include "pm_protocol.h"
+#include "pm_core.h"
 
 #include "Fw_global_config.h"
+#include "pm_protocol.h"
+#include "pm_ble_nrf51.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // DEFINES
 // --------------------------------------------------------------------------------------------------------------------
 #define PM_CORE_RTOS_TASK_PERIOD_ms (5u)
 
-#define PM_LED_BLINK_PERIOD_ms      pdMS_TO_TICKS(1000u)
+#define PM_LED_BLINK_PERIOD_ms      (1000u)
+#define PM_TRAINING_PERIOD_ms       (1000u) //!< 1 Hz
+//#define PM_TRAINING_PERIOD_ms       (100u) //!< 10 Hz
 
 #define ENABLE_SLAVE_LOOPBACK_TEST
+#define DEFAULT_MODE PM_MODE_TEST_SLAVE
 
 #define BLUE_LED_GPIO  4
 #define GREEN_LED_GPIO 5
@@ -43,21 +48,21 @@
 // --------------------------------------------------------------------------------------------------------------------
 // FUNCTION
 // --------------------------------------------------------------------------------------------------------------------
-static int pmMasterUartTx(uint8_t * data, uint8_t numBytes);
+static int pmMasterUartTx(const uint8_t * data, uint8_t numBytes);
 static int pmMasterUartRx(uint8_t * data, uint8_t numBytes);
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
-    static int pmSlaveUartTx(uint8_t * data, uint8_t numBytes);
+    static int pmSlaveUartTx(const uint8_t * data, uint8_t numBytes);
     static int pmSlaveUartRx(uint8_t * data, uint8_t numBytes);
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
 // VARIABLES
 // --------------------------------------------------------------------------------------------------------------------
-static bool g_initError = false;
+static pmCoreModes_t g_currentMode = PM_MODE_STARTUP;
 
 /*static*/ pmProtocolContext_t g_pmUartMasterContext;
-static pmProtocolDriver_t g_pmUartMasterDriver =
+static pmCoreUartDriver_t g_pmUartMasterDriver =
 {
     .tx = pmMasterUartTx,
     .rx = pmMasterUartRx
@@ -65,7 +70,7 @@ static pmProtocolDriver_t g_pmUartMasterDriver =
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
     /*static*/ pmProtocolContext_t g_pmUartSlaveContext;
-    static pmProtocolDriver_t g_pmUartSlaveDriver =
+    static pmCoreUartDriver_t g_pmUartSlaveDriver =
     {
         .tx = pmSlaveUartTx,
         .rx = pmSlaveUartRx
@@ -75,7 +80,7 @@ static pmProtocolDriver_t g_pmUartMasterDriver =
 // --------------------------------------------------------------------------------------------------------------------
 // FUNCTIONS
 // --------------------------------------------------------------------------------------------------------------------
-static int pmMasterUartTx(uint8_t * data, uint8_t numBytes)
+static int pmMasterUartTx(const uint8_t * data, uint8_t numBytes)
 {
 #if 0
 	for (int ix = 0; ix < numBytes; ix++)
@@ -83,9 +88,9 @@ static int pmMasterUartTx(uint8_t * data, uint8_t numBytes)
 	    uart_tx_raw_buf(PM_COPRO_UART, &data[ix], 1);
 	    vTaskDelay(1); // Delay 1 ms.
 	}
-#endif
-
+#else
 	uart_tx_raw_buf(PM_COPRO_UART, data, numBytes);
+#endif
 
     return numBytes;
 }
@@ -103,7 +108,7 @@ static int pmMasterUartRx(uint8_t * data, uint8_t numBytes)
 
 #ifdef ENABLE_SLAVE_LOOPBACK_TEST
 // --------------------------------------------------------------------------------------------------------------------
-static int pmSlaveUartTx(uint8_t * data, uint8_t numBytes)
+static int pmSlaveUartTx(const uint8_t * data, uint8_t numBytes)
 {
     uart_tx_raw_buf(PM_BLE_UART, data, numBytes);
 
@@ -143,14 +148,155 @@ void pm_test_send(const char *s)
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+void pm_ble_init(void);
+bool pm_ble_pair(void);
 
 static volatile int testSend = 0;
+
+static void pmCoreUartPassThrough(uint8_t consoleId, uint8_t otherId, uint8_t * escCount)
+{
+	uint8_t ch;
+
+	// Pass through console characters to the BLE module.
+	while (uart_rx_available(consoleId) > 0)
+	{
+		uart_rx_raw_buf(consoleId, &ch, 1);
+
+		if (NULL != escCount)
+		{
+			if (ch == '\n')
+			{
+				*escCount = *escCount + 1;
+			}
+			else
+			{
+				*escCount = 0;
+			}
+		}
+
+		uart_tx_raw_buf(otherId, &ch, 1);
+	}
+
+	// Pass through BLE characters to the console.
+	while (uart_rx_available(otherId) > 0)
+	{
+		uart_rx_raw_buf(otherId, &ch, 1);
+		uart_tx_raw_buf(consoleId, &ch, 1);
+	}
+}
+
+static bool g_waitingForHandshake = true;
+static void pmCoreNotifyStatus(uint8_t status)
+{
+	static bool pendingData = false;
+
+	pmCmdPayloadDefinition_t masterTx;
+	pmCmdPayloadDefinition_t masterRx;
+
+	if (!pendingData)
+	{
+		// Issue a request for the data.
+		masterTx.commandCode = PM_CMD_WRITE_STATUS;
+		masterTx.writeStatus.status = status;
+		if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&masterTx, &g_pmUartMasterContext))
+		{
+			pendingData = true;
+		}
+	}
+	else
+	{
+		int readResult = pmProtocolRead(&masterRx, &g_pmUartMasterContext);
+		if (PM_PROTOCOL_SUCCESS == readResult)
+		{
+			pendingData = false;
+			switch (masterRx.commandCode & 0x7F)
+			{
+				case PM_CMD_NEGATIVE_ACK:
+					// Received an unexpected NACK. Retry on the next pass.
+					break;
+				case PM_CMD_WRITE_STATUS:
+					// Handshake completed.
+					if (masterRx.writeStatus.status == status)
+					{
+						dbg_str("[pm_core] Handshake completed.\r\n");
+						g_waitingForHandshake = false;
+					}
+					break;
+				default:
+					// Was not expecting this code.
+					break;
+			}
+		}
+		else if (
+				(PM_PROTOCOL_RX_CMD_INVALID == readResult)
+				|| (PM_PROTOCOL_RX_TIMEOUT == readResult)
+				|| (PM_PROTOCOL_RX_CMD_INVALID == readResult)
+		)
+		{
+			// Read completed but there isn't a valid packet.
+			pendingData = false;
+		}
+		// Else, still waiting to read a response to the read request.
+	}
+}
+
+
+static pmCmdGetSensors_t sensorData;
+static void pmCoreReadSensorData(pmCmdGetSensors_t * data)
+{
+	static bool pendingData = false;
+
+	pmCmdPayloadDefinition_t masterTx;
+	pmCmdPayloadDefinition_t masterRx;
+
+	if (!pendingData)
+	{
+		// Issue a request for the data.
+		masterTx.commandCode = PM_CMD_GET_SENSORS;
+		if (PM_PROTOCOL_SUCCESS == pmProtocolSend(&masterTx, &g_pmUartMasterContext))
+		{
+			pendingData = true;
+		}
+	}
+	else
+	{
+		int readResult = pmProtocolRead(&masterRx, &g_pmUartMasterContext);
+		if (PM_PROTOCOL_SUCCESS == readResult)
+		{
+			pendingData = false;
+			switch (masterRx.commandCode & 0x7F)
+			{
+				case PM_CMD_NEGATIVE_ACK:
+					// Received an unexpected NACK. Retry on the next pass.
+					break;
+				case PM_CMD_GET_SENSORS:
+					// Data received -- copy it to the result buffer.
+					memcpy(data, &masterRx.getSensors, sizeof(*data));
+					break;
+				default:
+					// Was not expecting this code.
+					break;
+			}
+		}
+		else if (
+				(PM_PROTOCOL_RX_CMD_INVALID == readResult)
+				|| (PM_PROTOCOL_RX_TIMEOUT == readResult)
+				|| (PM_PROTOCOL_RX_CMD_INVALID == readResult)
+		)
+		{
+			// Read completed but there isn't a valid packet.
+			pendingData = false;
+		}
+		// Else, still waiting to read a response to the read request.
+	}
+}
 
 static void pmCoreRtosTask(void * params)
 {
     TickType_t lastWakeupTicks = xTaskGetTickCount();
     
     TickType_t lastLedBlinkTicks = lastWakeupTicks;
+    TickType_t lastTrainingTicks = lastWakeupTicks;
     uint8_t ledOn = 1;
 
 
@@ -170,15 +316,59 @@ static void pmCoreRtosTask(void * params)
 		uart_rx_raw_buf(UART_ID_FPGA_UART1, &dummy, 1);
 	}
 
+	// Used for training.
+    const char * connectString = "connect";
+    const int connectLen = sizeof(connectString) - 1;
+    const char * jsonString =  "{\"sample_rate\":1,"
+    		   	   	   	   	   "\"samples_per_packet\":3,"
+							   "\"column_location\":{"
+    						   "  \"Temperature\":0,"
+    						   "  \"Humidity\":1,"
+    						   "  \"Pressure\":2"
+    		   	   	   	   	   "}"
+    						   "}\r\n" ;
+
+    int jsonLen = strlen(jsonString);
+
+	pm_ble_init();
+
+	uint8_t escCount = 0;
     while(1)
     {
-        if (!g_initError)
-        {
-            TickType_t nowTicks = xTaskGetTickCount();
-            uint32_t nowTicks_ms  = nowTicks * 1000 / configTICK_RATE_HZ;
+        TickType_t nowTicks = xTaskGetTickCount();
+        uint32_t nowTicks_ms  = nowTicks * 1000 / configTICK_RATE_HZ;
 
-            if ((nowTicks - lastLedBlinkTicks) > PM_LED_BLINK_PERIOD_ms)
+    	if (g_currentMode == PM_MODE_TEST_BLE)
+    	{
+    		// Blink the blue LED.
+            if ((nowTicks - lastLedBlinkTicks) > pdMS_TO_TICKS(PM_LED_BLINK_PERIOD_ms))
             {
+        		HAL_GPIO_Write(GREEN_LED_GPIO, 0);
+        		HAL_GPIO_Write(RED_LED_GPIO, 0);
+
+                ledOn = (ledOn == 0) ? 1 : 0;
+                HAL_GPIO_Write(BLUE_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+
+            pmCoreUartPassThrough(DEBUG_UART, PM_BLE_UART, &escCount);
+
+            // If the user has entered 2 '\n' characters in a row, we'll exit this mode.
+			if (escCount > 1)
+			{
+				g_currentMode = DEFAULT_MODE;
+				escCount = 0;
+			}
+    	}
+    	else if (g_currentMode == PM_MODE_TEST_SLAVE)
+        {
+    		// Blink the green LED.
+            if ((nowTicks - lastLedBlinkTicks) > pdMS_TO_TICKS(PM_LED_BLINK_PERIOD_ms))
+            {
+        		HAL_GPIO_Write(BLUE_LED_GPIO, 0);
+        		HAL_GPIO_Write(RED_LED_GPIO, 0);
+
                 ledOn = (ledOn == 0) ? 1 : 0;
                 HAL_GPIO_Write(GREEN_LED_GPIO, ledOn);
 
@@ -190,40 +380,117 @@ static void pmCoreRtosTask(void * params)
             #ifdef ENABLE_SLAVE_LOOPBACK_TEST
                 pmProtocolPeriodic( nowTicks_ms, &g_pmUartSlaveContext);
             #endif
-
-			if (testSend)
-			{
-				pmProtocolRawPacket_t masterTx;
-				masterTx.numBytes = strnlen("test", PM_MAX_PAYLOAD_BYTES);
-				(void)memcpy(masterTx.bytes,"test", masterTx.numBytes);
-
-				if (PM_PROTOCOL_SUCCESS == pmProtocolSendPacket(&masterTx, &g_pmUartMasterContext))
-				{
-					dbg_str("Successfully sent the test string on the master node: ");
-					dbg_str("test");
-					dbg_str("\r\n");
-				}
-				else
-				{
-					dbg_str("Error: Failed to send the test string on the master node.\r\n");
-				}
-
-				testSend = 0;
-			}
         }
+    	else if (g_currentMode == PM_MODE_TEST_TRAINING)
+        {
+    		// Blink the amber LED.
+            if ((nowTicks - lastLedBlinkTicks) > pdMS_TO_TICKS(PM_LED_BLINK_PERIOD_ms))
+            {
+        		HAL_GPIO_Write(BLUE_LED_GPIO, 0);
 
-/*
-        uint8_t usrBtn;
-		HAL_GPIO_Read(0, &usrBtn);
-		if (!usrBtn)
-		{
-			if (!testSend)
-			{
-				pm_test_send("test");
-				testSend = 1;
-			}
+                ledOn = (ledOn == 0) ? 1 : 0;
+                HAL_GPIO_Write(GREEN_LED_GPIO, ledOn);
+        		HAL_GPIO_Write(RED_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+
+            pmBleSetMode_nRF51(true);
+
+            pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
+            pmCoreReadSensorData(&sensorData);
+
+            char buffer[512];
+
+            static bool ssi_connected = false;
+            if ((nowTicks - lastTrainingTicks) > pdMS_TO_TICKS(PM_TRAINING_PERIOD_ms))
+            {
+            	if (!ssi_connected)
+            	{
+            		if (connectLen <= pmBleUartService_nRF51.rx(buffer, connectLen))
+            		{
+            			ssi_connected = true;
+            		}
+            		else
+            		{
+            			sprintf(buffer, "[pm_core] Sending json with len %d.\r\n", jsonLen);
+            			dbg_str(buffer);
+            			dbg_str(jsonString);
+            			dbg_str("\n");
+            			pmBleUartService_nRF51.tx(jsonString, jsonLen);
+            		}
+            	}
+            	else
+            	{
+            		sprintf(buffer, "%d,%d,%d\n", sensorData.sensors[0].data,sensorData.sensors[1].data, sensorData.sensors[2].data);
+
+            		dbg_str("[pm_core] Transmitting data ");
+            		dbg_str(buffer);
+            		pmBleUartService_nRF51.tx(buffer, strlen(buffer));
+            	}
+
+            	lastTrainingTicks = nowTicks;
+            }
         }
-*/
+    	else if (g_currentMode == PM_MODE_PAIRING)
+    	{
+    		// Turn off the LED to indicate pairing.
+    		HAL_GPIO_Write(GREEN_LED_GPIO, 0);
+    		HAL_GPIO_Write(RED_LED_GPIO, 0);
+            HAL_GPIO_Write(BLUE_LED_GPIO, 0);
+
+    		if (pm_ble_pair())
+    		{
+    			g_currentMode = PM_MODE_NORMAL;
+    		}
+    		else
+    		{
+    			g_currentMode = PM_MODE_ERROR;
+    		}
+    	}
+    	else if (g_currentMode == PM_MODE_NORMAL)
+    	{
+    		// Blink the white LED.
+            if ((nowTicks - lastLedBlinkTicks) > pdMS_TO_TICKS(PM_LED_BLINK_PERIOD_ms))
+            {
+                ledOn = (ledOn == 0) ? 1 : 0;
+                HAL_GPIO_Write(GREEN_LED_GPIO, ledOn);
+        		HAL_GPIO_Write(BLUE_LED_GPIO, ledOn);
+        		HAL_GPIO_Write(RED_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+
+            pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
+            if (g_waitingForHandshake)
+            {
+            	pmCoreNotifyStatus(0); // Indicate we are ready to go.
+            }
+            else
+            {
+            	pmCoreReadSensorData(&sensorData);
+            	// TODO: Publish the data over BLE.
+
+            }
+    	}
+    	else if (g_currentMode == PM_MODE_ERROR)
+    	{
+    		// Blink the red LED.
+            if ((nowTicks - lastLedBlinkTicks) > pdMS_TO_TICKS(PM_LED_BLINK_PERIOD_ms))
+            {
+                HAL_GPIO_Write(GREEN_LED_GPIO, 0);
+        		HAL_GPIO_Write(BLUE_LED_GPIO, 0);
+
+                ledOn = (ledOn == 0) ? 1 : 0;
+        		HAL_GPIO_Write(RED_LED_GPIO, ledOn);
+
+                lastLedBlinkTicks = nowTicks;
+            }
+
+
+            pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
+            pmCoreNotifyStatus(1); // Indicate we are in an error state.
+    	}
         vTaskDelayUntil(&lastWakeupTicks, pdMS_TO_TICKS(PM_CORE_RTOS_TASK_PERIOD_ms));
     }
 }
@@ -233,30 +500,40 @@ void pm_main()
 {
     if (PM_PROTOCOL_SUCCESS != pmProtocolInit(&g_pmUartMasterDriver, &g_pmUartMasterContext))
     {
-        g_initError = true;
+    	g_currentMode = PM_MODE_ERROR;
     }
     #ifdef ENABLE_SLAVE_LOOPBACK_TEST
         if (PM_PROTOCOL_SUCCESS != pmProtocolInit(&g_pmUartSlaveDriver, &g_pmUartSlaveContext))
         {
-            g_initError = true;
+        	g_currentMode = PM_MODE_ERROR;
         }
     #endif
 
-    if (pdPASS != xTaskCreate(pmCoreRtosTask, "Polymath Task", 1024, NULL, (configMAX_PRIORITIES / 2), NULL))
+    if (pdPASS != xTaskCreate(pmCoreRtosTask, "Polymath Task", 2048, NULL, (configMAX_PRIORITIES / 2) + 1, NULL))
     {
-        g_initError = true;
+    	g_currentMode = PM_MODE_ERROR;
     }
 
-    if (g_initError)
+    if (g_currentMode == PM_MODE_ERROR)
     {
         // Turn on the red LED.
         HAL_GPIO_Write(RED_LED_GPIO, 1);
     }
     else
     {
+    	g_currentMode = DEFAULT_MODE;
         // Turn on the green LED.
         HAL_GPIO_Write(GREEN_LED_GPIO, 1);
     }
 
+}
+
+void pmSetMode(pmCoreModes_t mode)
+{
+	g_currentMode = mode;
+}
+pmCoreModes_t pmGetMode()
+{
+	return g_currentMode;
 }
 
