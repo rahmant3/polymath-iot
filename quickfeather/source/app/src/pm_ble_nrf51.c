@@ -253,26 +253,34 @@ int pmBleInit_nRF51(const pmCoreUartDriver_t * driver)
 }
 
 static bool g_inCommandMode = true;
-bool pmBleSwitchModes_nRF51()
+bool pmBleSetMode_nRF51(bool uartMode)
 {
 	bool result = false;
 
 	if (NULL != g_uartDriver)
 	{
-		if (sendATCommand("+++\n"))
+		if (!g_inCommandMode == uartMode) // If we are already in the proper mode, we can just return.
 		{
-			g_inCommandMode = !g_inCommandMode;
-
-			if (g_inCommandMode)
-			{
-				DBG_PRINT("[nrf51] Switched to command mode.\n");
-			}
-			else
-			{
-				DBG_PRINT("[nrf51] Switched to UART mode.\n");
-			}
-
 			result = true;
+		}
+		else
+		{
+			// For some reason we're having issues getting a response. Ignore the return code and assume success.
+			(void)sendATCommand("+++\n");
+			{
+				g_inCommandMode = !g_inCommandMode;
+
+				if (g_inCommandMode)
+				{
+					DBG_PRINT("[nrf51] Switched to command mode.\n");
+				}
+				else
+				{
+					DBG_PRINT("[nrf51] Switched to UART mode.\n");
+				}
+
+				result = true;
+			}
 		}
 	}
 	return result;

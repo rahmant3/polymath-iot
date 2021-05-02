@@ -395,6 +395,8 @@ static void pmCoreRtosTask(void * params)
                 lastLedBlinkTicks = nowTicks;
             }
 
+            pmBleSetMode_nRF51(true);
+
             pmProtocolPeriodic( nowTicks_ms, &g_pmUartMasterContext);
             pmCoreReadSensorData(&sensorData);
 
@@ -420,9 +422,14 @@ static void pmCoreRtosTask(void * params)
             	}
             	else
             	{
-            		sprintf(buffer, "%d,%d,%d", sensorData.sensors[0].data,sensorData.sensors[1].data, sensorData.sensors[2].data);
+            		sprintf(buffer, "%d,%d,%d\n", sensorData.sensors[0].data,sensorData.sensors[1].data, sensorData.sensors[2].data);
+
+            		dbg_str("[pm_core] Transmitting data ");
+            		dbg_str(buffer);
             		pmBleUartService_nRF51.tx(buffer, strlen(buffer));
             	}
+
+            	lastTrainingTicks = nowTicks;
             }
         }
     	else if (g_currentMode == PM_MODE_PAIRING)

@@ -388,8 +388,6 @@ static void pm_test_training(const struct cli_cmd_entry *pEntry)
 {
 	dbg_str("Switching to TRAINING_TEST mode. Power must be cycled to escape this mode.\n");
 
-	pmBleSwitchModes_nRF51();
-
 	// Switch to BLE test mode.
 	pmSetMode(PM_MODE_TEST_TRAINING);
 

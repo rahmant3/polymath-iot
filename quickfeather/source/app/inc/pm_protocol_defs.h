@@ -93,7 +93,7 @@ typedef enum pmStatusCodes_e
 typedef struct pmSensorReading_s
 {
   uint16_t sensorId;
-  uint16_t data;
+  uint32_t data;
 } pmSensorReading_t;
 
 //! No params is included in this request. Is is assumed each uint32_t is LSB.

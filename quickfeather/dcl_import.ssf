@@ -11,6 +11,18 @@
     ],
     "device_connections": [
         {
+            "name": "ble_simple_stream",
+            "display_name": "Simple Stream over BLE UART",
+            "value": 0,
+            "is_default": true,
+            "bluetooth_le_configuration": {
+                "service_uuid": "6e400001-b5a3-f393­e0a9-e50e24dcca9e",
+                "char_tx_uuid": "6e400002-b5a3-f393­e0a9-e50e24dcca9e",
+                "char_rx_uuid": "6e400003-b5a3-f393­e0a9-e50e24dcca9e",
+                "max_live_sample_rate":100
+            }
+        },
+        {
             "name": "serial_simple_stream",
             "display_name": "Data Stream Serial Port",
             "value": 1,
@@ -38,21 +50,34 @@
                 "device_port": 0,
                 "max_live_sample_rate": 1000000
             }
-        },
-        {
-            "name": "ble",
-            "display_name": "Simple Stream over BLE UART",
-            "value": 0,
-            "is_default": true,
-            "bluetooth_le_configuration": {
-                "service_uuid": "6E400001-B5A3-F393­E0A9-E50E24DCCA9E",
-                "char_tx_uuid": "6E400002-B5A3-F393-E0A9­E50E24DCCA9E",
-                "char_rx_uuid": "6E400003-B5A3-F393-E0A9­E50E24DCCA9E",,
-                "max_live_sample_rate":100
-            }
         }
     ],
     "capture_sources": [
+        {
+            "max_throughput": 0,
+            "name": "Polymath-Air-Cluster",
+            "part": "Polymath-Air-Cluster",
+            "sample_rates": [
+                1,
+                10,
+                100
+            ],
+            "is_default": false,
+            "sensors": [
+                {
+                    "column_count": 3,
+                    "is_default": true,
+                    "column_suffixes": [
+                        "Temperature",
+                        "Humidty",
+                        "Pressure"
+                    ],
+                    "type": "Gas"
+                }
+            ],
+            "sensor_id": 1184532934,
+            "can_live_stream": true
+        },
         {
             "max_throughput": 0,
             "name": "Motion",
@@ -125,31 +150,6 @@
                 }
             ],
             "sensor_id": 1184532964,
-            "can_live_stream": true
-        },
-        {
-            "max_throughput": 0,
-            "name": "Polymath-Air-Cluster",
-            "part": "Polymath-Air-Cluster",
-            "sample_rates": [
-                1,
-                10,
-                100
-            ],
-            "is_default": false,
-            "sensors": [
-                {
-                    "column_count": 3,
-                    "is_default": true,
-                    "column_suffixes": [
-                        "Temperature",
-                        "Humidty",
-                        "Pressure"
-                    ],
-                    "type": "Gas"
-                }
-            ],
-            "sensor_id": 1184532934,
             "can_live_stream": true
         }
     ],
