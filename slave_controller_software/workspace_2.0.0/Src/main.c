@@ -28,7 +28,9 @@
 #include <stdint.h>
 #include "FreeRTOS.h"
 #include "task.h"
-
+#include "mics/mics_sensor2.h"
+#include <stdio.h>
+#include "mics/hardware_defs.h"
 //#define ENABLE_MASTER_LOOPBACK_TEST
 /* USER CODE END Includes */
 
@@ -54,6 +56,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart6;
 
+
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -62,7 +65,7 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-
+uint8_t rx_buffer[7]={0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -150,7 +153,8 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -221,10 +225,15 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
 	while (1) {
     /* USER CODE END WHILE */
 
+		 //vTaskDelay(100);
     /* USER CODE BEGIN 3 */
+
+
 
 	}
   /* USER CODE END 3 */
@@ -567,6 +576,14 @@ void StartDefaultTask(void *argument) {
 		TickType_t nowTicks = xTaskGetTickCount();
 		uint32_t nowTicks_ms = nowTicks * 1000 / configTICK_RATE_HZ;
 		pmProtocolPeriodic(nowTicks_ms, &slave_uart);
+		uint32_t result_co2 = 0;
+		uint32_t result_voc = 0;
+		getSensorReading_co2level(&result_co2,0,HW_I2C1,NULL);
+		getSensorReadingvoclevel(&result_voc,0,HW_I2C1,NULL);
+		char msg[250];
+		snprintf(msg,sizeof(msg),"CO2_level is : %d VOC level is %d \r\n",result_co2,result_voc);
+		debug(msg);
+
 
 #ifdef ENABLE_MASTER_LOOPBACK_TEST
 		pmProtocolPeriodic(nowTicks_ms, &master_uart);

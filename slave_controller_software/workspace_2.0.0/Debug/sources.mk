@@ -26,6 +26,8 @@ Middlewares/Third_Party/FreeRTOS/Source \
 Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
 Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang \
 Src/bme680 \
+Src/cluster_id \
 Src \
+Src/mics \
 Startup \
 

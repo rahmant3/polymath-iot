@@ -23,7 +23,6 @@
 
 #define END_OF_PACKET_TIMEOUT_ms 250
 
-#define DEBUG
 
 #ifdef DEBUG
 	//#include <Fw_global_config.h>
