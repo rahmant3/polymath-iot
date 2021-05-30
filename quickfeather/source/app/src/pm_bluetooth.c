@@ -18,16 +18,16 @@
 #define PM_AIR_CLUSTER_PRESSURE_UUID    "0x0001"
 #define PM_AIR_CLUSTER_TEMPERATURE_UUID "0x0002"
 #define PM_AIR_CLUSTER_HUMIDITY_UUID    "0x0003"
-#define PM_AIR_CLUSTER_CO_UUID          "0x0004" //!< CO concentration.
-#define PM_AIR_CLUSTER_CO2_UUID         "0x0005" //!< CO2 concentration.
+#define PM_AIR_CLUSTER_CO2_UUID         "0x0004" //!< CO2 concentration.
+#define PM_AIR_CLUSTER_VOC_UUID         "0x0005" //!< VOC concentration.
 #define PM_AIR_CLUSTER_ERO_UUID         "0x0006" //!< Estimated Room Occupancy.
 #define PM_AIR_CLUSTER_EAQ_UUID         "0x0007" //!< Estimated Air Quality.
 
 #define PM_AIR_CLUSTER_PRESSURE_IDX    0
 #define PM_AIR_CLUSTER_TEMPERATURE_IDX 1
 #define PM_AIR_CLUSTER_HUMIDITY_IDX    2
-#define PM_AIR_CLUSTER_CO_IDX          3
-#define PM_AIR_CLUSTER_CO2_IDX         4
+#define PM_AIR_CLUSTER_CO2_IDX         3
+#define PM_AIR_CLUSTER_VOC_IDX         4
 #define PM_AIR_CLUSTER_ERO_IDX         5
 #define PM_AIR_CLUSTER_EAQ_IDX         6
 
@@ -36,8 +36,8 @@ pmBleCharacteristic_t pmAirClusterChars[] =
 	[PM_AIR_CLUSTER_PRESSURE_IDX]    = {.uuid = PM_AIR_CLUSTER_PRESSURE_UUID, .properties = PM_BLE_PROPERTY_READ },
 	[PM_AIR_CLUSTER_TEMPERATURE_IDX] = {.uuid = PM_AIR_CLUSTER_TEMPERATURE_UUID, .properties = PM_BLE_PROPERTY_READ },
 	[PM_AIR_CLUSTER_HUMIDITY_IDX]    = {.uuid = PM_AIR_CLUSTER_HUMIDITY_UUID, .properties = PM_BLE_PROPERTY_READ },
-	[PM_AIR_CLUSTER_CO_IDX]          = {.uuid = PM_AIR_CLUSTER_CO_UUID, .properties = PM_BLE_PROPERTY_READ },
 	[PM_AIR_CLUSTER_CO2_IDX]         = {.uuid = PM_AIR_CLUSTER_CO2_UUID, .properties = PM_BLE_PROPERTY_READ },
+	[PM_AIR_CLUSTER_VOC_IDX]         = {.uuid = PM_AIR_CLUSTER_VOC_UUID, .properties = PM_BLE_PROPERTY_READ },
 	[PM_AIR_CLUSTER_ERO_IDX]         = {.uuid = PM_AIR_CLUSTER_ERO_UUID, .properties = PM_BLE_PROPERTY_READ },
 	[PM_AIR_CLUSTER_EAQ_IDX]         = {.uuid = PM_AIR_CLUSTER_EAQ_UUID, .properties = PM_BLE_PROPERTY_READ },
 };

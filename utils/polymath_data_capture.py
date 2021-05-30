@@ -10,9 +10,9 @@
 #       - e.g. Create a virtual environment and activate it:
 #            py -3.8 -m venv v
 #            env\Scripts\activate.bat
-#   - adafruit-ble library
+#   - adafruit-circuitpython-ble library
 #     - i.e. Using 
-#           pip install adafruit-ble
+#           pip install adafruit-circuitpython-ble
 # --------------------------------------------------------------------------------------------------------------------
 
 # Reference: https://learn.adafruit.com/circuitpython-ble-libraries-on-any-computer/ble-uart-example
@@ -99,7 +99,7 @@ class PolymathTraining():
             uart_service = self.uart_connection[UARTServiceCustom]
             if (uart_service.in_waiting > 0):
                 line = uart_service.readline().decode()
-                # print(line)
+                print(line)
 
                 if ((line is not None) and (len(line) > 0)):
                     if not self.config:
@@ -195,6 +195,7 @@ while not p.connected():
     p.connect()
 
 # Start data collection
+print("Starting data collection.")
 while p.connected():
     p.run()
 

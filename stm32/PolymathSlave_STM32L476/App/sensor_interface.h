@@ -36,7 +36,7 @@ typedef struct sensorDriver_s
 // Structure containing the interface needed to control a sensor (i.e. drivers, parameters).
 typedef struct sensorModule_s
 {
-  sensorDriver_t * drivers;
+  const sensorDriver_t * drivers;
   sensorParamsPtr params;
 } sensorModule_t;
 

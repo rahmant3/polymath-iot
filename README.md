@@ -8,7 +8,7 @@ Polymath-IoT is a generic sensor cluster consisting of two separate modules that
 
 The controller module consists of a two-micro system, with the slave system acting as an IO expander, and the master module collecting the data and publishing it over BLE.
 
-The sensor module simply contains all of the sensors for a particular sensor cluster, and connects to the controller module. For this competition our focus was on sensor cluster for collecting air quality data.
+The sensor module simply contains all of the sensors for a particular sensor cluster, and connects to the controller module. For this competition our focus was on creating a sensor cluster for collecting air quality data.
 
 ## Directory Structure
 - hardware -- Contains the schematic for the Polymath system, as well as the files needed to build the PCB for the system.

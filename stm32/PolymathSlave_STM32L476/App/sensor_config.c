@@ -1,26 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Sensor_Interface.h"
+
 #include "sensor_config.h"
-#include "bme680/bme680_helper.h"
 
-getReadingFncPtr getReading_CO2 = getSensorReading_gas_resistance;
-getReadingFncPtr getReading_Humidity = getSensorReading_humidity;
-getReadingFncPtr getReadingTemp = getSensorReading_temperature;
-sensorDriver_t coSensor = {.getReading = getSensorReading_gas_resistance};
-sensorDriver_t humidityDrivers = {.getReading = getSensorReading_humidity};
-sensorDriver_t tempSensor = {.getReading =getSensorReading_temperature };
+#include "bme680_helper.h"
+#include "micsvz89te.h"
+#include "sensor_interface.h"
 
-//sensorDriver_t getReading_H2O
-// Declare parameters for all of the sensors in the sensor table.
-//static const exampleH2O_t humidityParams = {0};
-//static const exampleCO2_t co2SensorParams = {0};
 
 // Global list of sensors and sensor drivers.
 const sensorModule_t sensorTable[NUM_SENSOR_IDS] =
 {
-  [HUMIDITY_SENSOR]   = { .drivers = &humidityDrivers,  .params = NULL },
-  [CO2_SENSOR]   = { .drivers = &coSensor, .params = NULL },
-  [TEMP_SENSOR] = {.drivers = &tempSensor, .params = NULL },
+  [HUMIDITY_SENSOR]   = { .drivers = &sensorDriverHumidity_bme680,    .params = NULL },
+  [PRESSURE_SENSOR]   = { .drivers = &sensorDriverPressure_bme680,    .params = NULL },
+  [TEMP_SENSOR]       = { .drivers = &sensorDriverTemperature_bme680, .params = NULL },
+  [CO2_SENSOR]        = { .drivers = &sensorDriverCO2_micsvz89te,     .params = NULL },
+  [TVOC_SENSOR]       = { .drivers = &sensorDriverVOC_micsvz89te,     .params = NULL },
+  //[CO2_SENSOR]        = { .drivers = &sensorDriverCO2_bme680,     .params = NULL },
+  //[TVOC_SENSOR]       = { .drivers = &sensorDriverVOC_bme680,     .params = NULL },
+
 };
 

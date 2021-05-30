@@ -13,8 +13,10 @@
 typedef enum sensorId_e
 {
   HUMIDITY_SENSOR,
-  CO2_SENSOR,
+  PRESSURE_SENSOR,
   TEMP_SENSOR,
+  CO2_SENSOR,
+  TVOC_SENSOR,
 
   NUM_SENSOR_IDS
 } sensorId_t;
