@@ -23,6 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
@@ -30,6 +32,7 @@
 #include "bme680_helper.h"
 #include "pm_protocol.h"
 #include "sensor_config.h"
+#include "ws2812_led.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,6 +42,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define LED_DEFAULT_BRIGHTNESS (15u)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,6 +52,10 @@
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
+I2C_HandleTypeDef hi2c2;
+
+TIM_HandleTypeDef htim3;
+DMA_HandleTypeDef hdma_tim3_ch1_trig;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -60,9 +68,12 @@ osThreadId defaultTaskHandle;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_I2C2_Init(void);
+static void MX_TIM3_Init(void);
 void StartDefaultTask(void const * argument);
 
 /* USER CODE BEGIN PFP */
@@ -94,7 +105,11 @@ static pmProtocolContext_t slave_uart;
 static pmCoreUartDriver_t slave_uart_drivers = { .tx = pmSlaveUartTx, .rx =
 		pmSlaveUartRx, };
 
-
+static const ws2812Config_t led_config =
+{
+	.timModule = &htim3,
+	.timChannel = TIM_CHANNEL_1
+};
 /* USER CODE END 0 */
 
 /**
@@ -125,19 +140,23 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
+  MX_I2C2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-	if (PM_PROTOCOL_SUCCESS
-			!= pmProtocolInit(&slave_uart_drivers, &slave_uart)) {
-		debug("Error! PM protocol initialized failed\n");
-	}
+  WS2812_Init(&led_config);
+  WS2812_Send(0, 0, LED_DEFAULT_BRIGHTNESS); // Set the colour to blue indicating we haven't paired with the master.
 
-	if (BME680_OK != bme680_initialize(&bme_init_array[BME_I2C1]))
-	{
-		debug("Error! BME680 initialized failed\r\n");
-	}
+  if (PM_PROTOCOL_SUCCESS != pmProtocolInit(&slave_uart_drivers, &slave_uart)) {
+    debug("Error! PM protocol initialized failed\n");
+  }
+  if (BME680_OK != bme680_initialize(&bme_init_array[BME_I2C1])) {
+    debug("Error! BME680 initialized failed\r\n");
+  }
+
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -158,7 +177,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -230,10 +249,11 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_I2C1;
+                              |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_I2C2;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
+  PeriphClkInit.I2c2ClockSelection = RCC_I2C2CLKSOURCE_PCLK1;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -289,6 +309,111 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.Timing = 0x10909CEC;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c2, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c2, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+
+  /* USER CODE END I2C2_Init 2 */
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 100 - 1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
 
 }
 
@@ -363,6 +488,22 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -415,7 +556,21 @@ void StartDefaultTask(void const * argument)
 #define LED_PORT LD2_GPIO_Port
 #define LED_PIN  LD2_Pin
 
+
+#define COLOUR_TO_HEX(r,g,b) ((r << 16) | (g << 8) | (b))
+#define R_FROM_HEX(hex) ((hex >> 16) & 0xFF)
+#define G_FROM_HEX(hex) ((hex >> 8) & 0xFF)
+#define B_FROM_HEX(hex) (hex & 0xFF)
+
+#define COLOUR_OFF     COLOUR_TO_HEX(0, 0, 0)
+#define COLOUR_PAIRING COLOUR_TO_HEX(255, 212, 128)
+#define COLOUR_NORMAL  COLOUR_TO_HEX(128, 255, 0)
+#define COLOUR_ERROR   COLOUR_TO_HEX(255, 0, 0)
+
   TickType_t lastLedTicks = 0;
+  bool toggle = true;
+  uint32_t targetColour = COLOUR_PAIRING;
+  uint32_t currentColour = COLOUR_OFF;
   /* Infinite loop */
   for(;;)
   {
@@ -425,9 +580,37 @@ void StartDefaultTask(void const * argument)
 
 	if ((nowTicks - lastLedTicks) > pdMS_TO_TICKS(LED_BLINK_RATE_ms))
 	{
-	    HAL_GPIO_TogglePin(LED_PORT, LED_PIN);
-	    lastLedTicks = nowTicks;
+		HAL_GPIO_TogglePin(LED_PORT, LED_PIN);
+		lastLedTicks = nowTicks;
+
+		if (!toggle || (currentColour == COLOUR_OFF))
+		{
+			WS2812_Send(R_FROM_HEX(targetColour), G_FROM_HEX(targetColour), B_FROM_HEX(targetColour));
+			currentColour = targetColour;
+		}
+		else
+		{
+			WS2812_Send(R_FROM_HEX(COLOUR_OFF), G_FROM_HEX(COLOUR_OFF), B_FROM_HEX(COLOUR_OFF));
+			currentColour = COLOUR_OFF;
+		}
 	}
+#if 0
+	char buffer[255];
+	for (int ix = 0; ix < NUM_SENSOR_IDS; ix++)
+	{
+		int32_t reading;
+		if (SENSOR_SUCCESS != sensorTable[ix].drivers->getReading(&reading, 0, sensorTable[ix].params))
+		{
+			debug("Error: Failed to read data from sensor.\r\n");
+			reading = 0;
+		}
+		else
+		{
+			sprintf(buffer, "Successfully read sensor # %d, data is %d.\r\n", ix, (int)reading);
+			debug(buffer);
+		}
+	}
+#endif
 
 	// Check for reads on the slave node.
 	pmCmdPayloadDefinition_t slaveRx;
@@ -452,6 +635,19 @@ void StartDefaultTask(void const * argument)
 			}
 			case PM_CMD_WRITE_STATUS:
 			{
+				if (slaveRx.writeStatus.status == PM_RET_SUCCESS)
+				{
+			      //WS2812_Send(0, LED_DEFAULT_BRIGHTNESS, 0); // Set the colour to green indicating we paired successfully.
+				  targetColour = COLOUR_NORMAL;
+				  toggle = false;
+				}
+				else
+				{
+			      //WS2812_Send(LED_DEFAULT_BRIGHTNESS, 0, 0); // Set the colour to red indicating an error has occurred.
+				  targetColour = COLOUR_ERROR;
+				  toggle = true;
+				}
+
 				// Echo back the status.
 				pmCmdPayloadDefinition_t slaveTx;
 				slaveTx.commandCode = slaveRx.commandCode | PM_PROTOCOL_RESP_MASK;

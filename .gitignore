@@ -14,6 +14,19 @@ quickfeather/source/app/GCC_Project/Eclipse_Make_Project/.cproject
 # FPGA Toolchain
 quickfeather/source/qorc-sdk/quicklogic-fpga-toolchain
 
+# STM32CubeIDE configurations
+stm32/.metadata
+stm32/PolymathSlave_STM32L476/.settings
+stm32/PolymathSlave_STM32L476/Debug/
+stm32/PolymathSlave_STM32L476/Release
+
+# BSEC Library -- Users must be licensed to use this library.
+bsec_datatypes.h
+bsec_interface.h
+bsec_integration.h
+bsec_integration.c
+libalgobsec.a
+
 # ---------------- C/C++ IGNORES -----------------------
 
 # Prerequisites

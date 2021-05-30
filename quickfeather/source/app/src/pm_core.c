@@ -320,11 +320,13 @@ static void pmCoreRtosTask(void * params)
     const char * connectString = "connect";
     const int connectLen = sizeof(connectString) - 1;
     const char * jsonString =  "{\"sample_rate\":1,"
-    		   	   	   	   	   "\"samples_per_packet\":3,"
+    		   	   	   	   	   "\"samples_per_packet\":5,"
 							   "\"column_location\":{"
-    						   "  \"Temperature\":0,"
-    						   "  \"Humidity\":1,"
-    						   "  \"Pressure\":2"
+    						   "  \"Humidity\":0,"
+    						   "  \"Pressure\":1,"
+    						   "  \"Temperature\":2,"
+    						   "  \"CO2\":3,"
+    						   "  \"TVOC\":4"
     		   	   	   	   	   "}"
     						   "}\r\n" ;
 
@@ -422,7 +424,12 @@ static void pmCoreRtosTask(void * params)
             	}
             	else
             	{
-            		sprintf(buffer, "%d,%d,%d\n", sensorData.sensors[0].data,sensorData.sensors[1].data, sensorData.sensors[2].data);
+            		sprintf(buffer, "%d", sensorData.sensors[0].data);
+            		for (int ix = 1; ix < sensorData.numSensors; ix++)
+            		{
+            			sprintf(buffer, "%s,%d", buffer, sensorData.sensors[ix].data);
+            		}
+            		sprintf(buffer, "%s\n", buffer);
 
             		dbg_str("[pm_core] Transmitting data ");
             		dbg_str(buffer);
@@ -469,8 +476,10 @@ static void pmCoreRtosTask(void * params)
             else
             {
             	pmCoreReadSensorData(&sensorData);
-            	// TODO: Publish the data over BLE.
-
+            	for (int ix = 0; ix < sensorData.numSensors; ix++)
+            	{
+                	pm_ble_test_update_char(sensorData.sensors[ix].sensorId, sensorData.sensors[ix].data);
+            	}
             }
     	}
     	else if (g_currentMode == PM_MODE_ERROR)
@@ -522,7 +531,8 @@ void pm_main()
     else
     {
     	g_currentMode = DEFAULT_MODE;
-        // Turn on the green LED.
+
+    	// Turn on the green LED.
         HAL_GPIO_Write(GREEN_LED_GPIO, 1);
     }
 
