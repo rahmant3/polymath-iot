@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2021-04-02T01:42:36Z",
+        "GenerationSoftware": {
+            "Application": "EAGLE",
+            "Vendor": "Autodesk",
+            "Version": "9.6.2"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.49,
+        "LayerNumber": 4,
+        "Name": {
+            "ProjectId": "PolyMath"
+        },
+        "Owner": "Hemant Gopalsing <abhigopals103@gmail.com>",
+        "Size": {
+            "X": 77.75,
+            "Y": 80.166978
+        }
+    }
+}
