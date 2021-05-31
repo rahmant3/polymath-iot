@@ -1,6 +1,6 @@
 {
-    "name": "QuickFeather SimpleStream",
-    "uuid": "10b1db20-48a5-4442-a40e-fc530b456c89",
+    "name": "Polymath SimpleStream",
+    "uuid": "d22446a9-2d73-4a3e-8302-3395c87a6e2c",
     "collection_methods": [
         {
             "name": "live",
@@ -10,18 +10,6 @@
         }
     ],
     "device_connections": [
-        {
-            "name": "ble_simple_stream",
-            "display_name": "Simple Stream over BLE UART",
-            "value": 0,
-            "is_default": true,
-            "bluetooth_le_configuration": {
-                "service_uuid": "6e400001-b5a3-f393­e0a9-e50e24dcca9e",
-                "char_tx_uuid": "6e400002-b5a3-f393­e0a9-e50e24dcca9e",
-                "char_rx_uuid": "6e400003-b5a3-f393­e0a9-e50e24dcca9e",
-                "max_live_sample_rate":100
-            }
-        },
         {
             "name": "serial_simple_stream",
             "display_name": "Data Stream Serial Port",
@@ -65,12 +53,14 @@
             "is_default": false,
             "sensors": [
                 {
-                    "column_count": 3,
+                    "column_count": 5,
                     "is_default": true,
                     "column_suffixes": [
+                        "Humidity",
+                        "Pressure",
                         "Temperature",
-                        "Humidty",
-                        "Pressure"
+                        "CO2",
+                        "TVOC"
                     ],
                     "type": "Gas"
                 }
