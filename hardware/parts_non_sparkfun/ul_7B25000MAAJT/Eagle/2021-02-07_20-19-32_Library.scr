@@ -1,0 +1,120 @@
+# Created by Ultra Librarian Gold 8.3.283 Copyright © 1999-2018
+# Frank Frank, Accelerated Designs
+
+Grid mil;
+Set Wire_Bend 2;
+
+
+Edit 'CRYSTAL_TXC_7B.pac';
+Layer 1;
+Smd '1' 47 79 -0 R0 NOCREAM (-47 76.5);
+Layer 1;
+Smd '2' 47 79 -0 R0 NOCREAM (-47 -76.5);
+Layer 1;
+Smd '3' 47 79 -0 R180 NOCREAM (47 -76.5);
+Layer 1;
+Smd '4' 47 79 -0 R180 NOCREAM (47 76.5);
+Layer 31;
+Layer 31;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (-70.5 116) (-70.5 37) (-23.5 37) (-23.5 116) (-70.5 116);
+Layer 31;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (-70.5 -37) (-70.5 -116) (-23.5 -116) (-23.5 -37) (-70.5 -37);
+Layer 31;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (23.5 -37) (23.5 -116) (70.5 -116) (70.5 -37) (23.5 -37);
+Layer 31;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (23.5 116) (23.5 37) (70.5 37) (70.5 116) (23.5 116);
+Layer 29;
+Layer 29;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (-70.5 116) (-70.5 37) (-23.5 37) (-23.5 116) (-70.5 116);
+Layer 29;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (-70.5 -37) (-70.5 -116) (-23.5 -116) (-23.5 -37) (-70.5 -37);
+Layer 29;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (23.5 -37) (23.5 -116) (70.5 -116) (70.5 -37) (23.5 -37);
+Layer 29;
+Change Spacing 50;
+Change Pour solid;
+Polygon 1  (23.5 116) (23.5 37) (70.5 37) (70.5 116) (23.5 116);
+Layer 21;
+Wire 6 (-10 -116) (10 -116);
+Wire 6 (81 -29) (81 29);
+Wire 6 (10 116) (-10 116);
+Wire 6 (-81 29) (-81 -29);
+Wire 6 (-148 76) -180 (-154 76);
+Wire 6 (-154 76) -180 (-148 76);
+Change Size 50;
+Change Ratio 6;
+Text '>Value' SR0 (-68 -25);
+Layer 51;
+Wire 6 (-66 -102) (66 -102);
+Wire 6 (66 -102) (66 102);
+Wire 6 (66 102) (-66 102);
+Wire 6 (-66 102) (-66 -102);
+Wire 0 (-20 76) -180 (-26 76);
+Wire 0 (-26 76) -180 (-20 76);
+Wire 6 (12 102) -180 (-12 101);
+Layer 25;
+Change Size 50;
+Change Ratio 6;
+Text '>Name' SR0 (-129 -25);
+Layer 27;
+
+Edit '7B-48.000MAAJ-T.sym';
+Layer 94;
+Pin '1' Pas None Middle R0 Both 1 (100 0)
+Pin '2' Pas None Middle R0 Both 1 (100 -100)
+Pin '3' Pas None Middle R180 Both 1 (1200 -100)
+Pin '4' Pas None Middle R180 Both 1 (1200 0)
+Wire 6 (300 150) (300 -250);
+Wire 6 (300 -250) (1000 -250);
+Wire 6 (1000 -250) (1000 150);
+Wire 6 (1000 150) (300 150);
+Wire 6 (600 50) (600 -150);
+Wire 6 (600 -150) (700 -150);
+Wire 6 (700 -150) (700 50);
+Wire 6 (700 50) (600 50);
+Wire 6 (550 50) (550 -150);
+Wire 6 (750 50) (750 -150);
+Wire 6 (750 -50) (850 -50);
+Wire 6 (550 -50) (450 -50);
+Wire 6 (450 -50) (450 0);
+Wire 6 (450 0) (300 0);
+Wire 6 (850 -50) (850 -100);
+Wire 6 (850 -100) (1000 -100);
+Layer 97;
+Layer 95;
+Change Size 82;
+Change Ratio 6;
+Text '>Name' SR0 (464 409);
+Layer 96;
+Change Size 82;
+Change Ratio 6;
+Text '>Value' SR0 (439 309);
+
+Edit '7B-25.000MAAJ-T.dev';
+Prefix 'CR';
+Description '';
+Value Off;
+Add 7B-48.000MAAJ-T 'A' Next  1 (0 0);
+Package 'CRYSTAL_TXC_7B';
+Technology '';
+Attribute Vendor 'TXC';
+Attribute Manufacturer_Part_Number '7B-25.000MAAJ-T';
+Attribute Built_By 'EMA_UL_Team';
+Connect 'A.1' '1';
+Connect 'A.2' '2';
+Connect 'A.3' '3';
+Connect 'A.4' '4';

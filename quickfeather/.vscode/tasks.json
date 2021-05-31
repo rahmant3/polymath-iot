@@ -1,0 +1,24 @@
+{
+	"tasks": [
+		{
+			"label": "Build app",
+			"command": "bash",
+			"args": ["build_app.sh"],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Build fpga",
+			"command": "bash",
+			"args": ["build_fpga.sh"],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}
